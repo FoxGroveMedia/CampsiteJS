@@ -1,0 +1,7 @@
+campsite[0-9][0-9]/
+node_modules
+npm-debug.log*
+dist
+coverage
+.DS_Store
+.env

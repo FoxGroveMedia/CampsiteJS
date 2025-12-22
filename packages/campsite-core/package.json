@@ -1,0 +1,24 @@
+{
+  "name": "campsite-core",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Core engine for Campsite static site generator.",
+  "bin": {
+    "campsite": "./index.js"
+  },
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0",
+    "gray-matter": "^4.0.3",
+    "kolorist": "^1.8.0",
+    "liquidjs": "^10.12.0",
+    "markdown-it": "^14.1.0",
+    "nunjucks": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
