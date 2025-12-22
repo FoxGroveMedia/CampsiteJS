@@ -11,7 +11,7 @@ Welcome to Campsite, the static site generator that feels like a weekend in the 
 - Quick setup: new sites in a few prompts
 - Flexible templating: Markdown, Nunjucks, Liquid, optional Vue/Alpine sprinkles
 - Friendly defaults: warm colors, simple layouts, and Tailwind-ready styles
-- Batteries included: dev server, file watcher, and static output to `dist/`
+- Batteries included: dev server, file watcher, and static output to `campsite/`
 
 ## Fast Start (New Site)
 ```
@@ -31,12 +31,12 @@ npm install
 npm run dev
 ```
 - Runs the sample site using the local basecamp build
-- Scripts: `npm run build` (clean build), `npm run serve` (serve existing `dist/`)
+- Scripts: `npm run build` (clean build), `npm run serve` (serve existing `campsite/`)
 
-## Basecamp Commands
-- `campsite dev` — watch `src/` and `public/`, rebuild, and serve `dist/`
-- `campsite build` — clean build to `dist/`
-- `campsite serve` — serve an existing `dist/`
+## Campsite Commands
+- `npx campsite dev` — watch `src/` and `public/`, rebuild, and serve `campsite/`
+- `npx campsite build` — clean build to `campsite/`
+- `npx campsite serve` — serve an existing `campsite/`
 
 ## Project Layout
 - packages/create-campsite — CLI that copies the starter template and installs deps
@@ -47,7 +47,7 @@ npm run dev
 - Config: `campsite.config.js` controls `siteName`, `srcDir`, `outDir`, engines, integrations
 - Pages: Markdown with frontmatter or `.njk` templates; other files copy through
 - Layouts: Nunjucks defaults with a base layout and content block
-- Dev loop: file watcher rebuilds on change; output served from `dist/`
+- Dev loop: file watcher rebuilds on change; output served from `campsite/`
 
 ## Contributing
 Pull up a camp chair and open a PR. Keep it cozy, documented, and easy to extend. Tests and linting are coming soon.
