@@ -2,8 +2,8 @@
 Welcome to Campsite, the static site generator that feels like a weekend in the woods. Pack light, pitch fast, and ship sites with a cozy developer experience.
 
 ## 🗺️ Trail Map
-- packages/create-campsite — scaffolder invoked via `npm create campsite@latest`
-- packages/basecamp — the build/dev/serve engine
+- packages/campsitejs — scaffolder invoked via `npm create campsitejs@latest` (or `npx campsitejs@latest`)
+- packages/basecampjs — the build/dev/serve engine
 
 ## 🏕️ Why Camp With Us?
 - Quick setup: new sites in a few prompts
@@ -13,7 +13,7 @@ Welcome to Campsite, the static site generator that feels like a weekend in the 
 
 ## 🚀 Fast Start (New Site)
 ```
-npm create campsite@latest my-campsite-name
+npm create campsitejs@latest my-campsite-name
 cd my-campsite-name
 npm install
 npm run dev
@@ -28,7 +28,7 @@ cd campsite01
 npm install
 npm run dev
 ```
-- Runs the sample site using the local basecamp build
+- Runs the sample site using the local basecampjs build
 - Scripts: `npm run build` (clean build), `npm run serve` (serve existing `campsite/`)
 
 ## 🚦 Campsite Commands
@@ -37,8 +37,8 @@ npm run dev
 - `npx campsite serve` — serve an existing `campsite/`
 
 ## 🗂️ Project Layout
-- packages/create-campsite — CLI that copies the starter template and installs deps
-- packages/basecamp — exposes `campsite dev|build|serve`
+- packages/campsitejs — CLI that copies the starter template and installs deps
+- packages/basecampjs — exposes `campsite dev|build|serve`
 - campsite-site — sample consumer with `src/pages`, `src/layouts`, `public`
 
 ## 🔥 Core Concepts

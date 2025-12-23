@@ -90,12 +90,12 @@ async function updatePackageJson(targetDir, answers) {
   pkg.devDependencies = pkg.devDependencies || {};
   const deps = pkg.dependencies;
   const devDeps = pkg.devDependencies;
-  const localCoreDir = resolve(__dirname, "../basecamp");
+  const localCoreDir = resolve(__dirname, "../basecampjs");
   if (existsSync(localCoreDir)) {
     const relCore = relative(targetDir, localCoreDir) || ".";
-    deps["basecamp"] = `file:${relCore}`;
+    deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecamp"] = "^0.0.1";
+    deps["basecampjs"] = "^0.0.1";
   }
   if (answers.markdown) deps["markdown-it"] = "^14.1.0";
   if (answers.templateEngines.includes("nunjucks")) deps["nunjucks"] = "^3.2.4";

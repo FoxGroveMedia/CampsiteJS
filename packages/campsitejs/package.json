@@ -1,0 +1,28 @@
+{
+  "name": "campsitejs",
+  "version": "0.0.2",
+  "type": "module",
+  "description": "Create a new Campsite static site (campsitejs).",
+  "bin": {
+    "campsitejs": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "template"
+  ],
+  "keywords": [
+    "campsite",
+    "static-site-generator",
+    "campsitejs",
+    "scaffolding"
+  ],
+  "license": "MIT",
+  "author": "Campsite",
+  "dependencies": {
+    "kleur": "^4.1.5",
+    "prompts": "^2.4.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

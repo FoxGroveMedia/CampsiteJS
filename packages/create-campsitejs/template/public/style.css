@@ -1,0 +1,100 @@
+:root {
+  --fg-ink: #0b0c10;
+  --fg-ink-soft: #161821;
+  --fg-foam: #f4ede0;
+  --fg-glow: #f97316;
+  --fg-forest: #1f5130;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+a {
+  color: #fbbf24;
+}
+.site-header, .site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(12, 13, 19, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.site-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+}
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+nav a {
+  margin-left: 1rem;
+  text-decoration: none;
+}
+main {
+  padding: 2rem 1.5rem 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.hero {
+  padding: 2.5rem;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(31, 81, 48, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.hero .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.hero h1 {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 2.4rem;
+}
+.hero p {
+  margin: 0.4rem 0;
+}
+pre, code {
+  font-family: "JetBrains Mono", Menlo, Consolas, monospace;
+}
+.alpine-card {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+.alpine-card button {
+  background: #f97316;
+  color: #0b0c10;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+}
+.alpine-card .tip {
+  margin-top: 0.75rem;
+}
+@media (max-width: 640px) {
+  .site-header, .site-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  nav a {
+    margin-left: 0;
+    margin-right: 1rem;
+  }
+  .hero {
+    padding: 1.5rem;
+  }
+  .hero h1 {
+    font-size: 1.9rem;
+  }
+}

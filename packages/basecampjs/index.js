@@ -102,10 +102,19 @@ function createLiquidEnv(layoutsDir, pagesDir, srcDir) {
   });
 }
 
-function pageContext(frontmatter, html, config, relPath, data) {
+function toUrlPath(outRel) {
+  const normalized = outRel.replace(/\\/g, "/");
+  if (normalized.endsWith("index.html")) {
+    const trimmed = normalized.slice(0, -"index.html".length);
+    return trimmed ? `/${trimmed}` : "/";
+  }
+  return `/${normalized}`;
+}
+
+function pageContext(frontmatter, html, config, relPath, data, url = "/") {
   return {
     site: { name: config.siteName, config },
-    page: { ...frontmatter, content: html, source: relPath },
+    page: { ...frontmatter, content: html, source: relPath, url },
     frontmatter,
     content: html,
     data,
@@ -145,13 +154,14 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   const ext = extname(filePath).toLowerCase();
   const outRel = rel.replace(/\.liquid(\.html)?$/i, ".html").replace(ext, ".html");
   const outPath = join(outDir, outRel);
+  const url = toUrlPath(outRel);
   await ensureDir(dirname(outPath));
 
   if (ext === ".md") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
     const html = md.render(parsed.content);
-    const ctx = pageContext(parsed.data, html, config, rel, data);
+    const ctx = pageContext(parsed.data, html, config, rel, data, url);
     const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv);
     await writeFile(outPath, rendered, "utf8");
     return;
@@ -160,7 +170,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   if (ext === ".njk") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, url);
     const templateName = rel.replace(/\\/g, "/");
     let pageHtml = env.renderString(parsed.content, ctx, { path: templateName });
     if (shouldRenderMarkdown(parsed.data, config, false)) {
@@ -174,7 +184,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   if (ext === ".liquid" || filePath.toLowerCase().endsWith(".liquid.html")) {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, url);
     let pageHtml = await liquidEnv.parseAndRender(parsed.content, ctx);
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
@@ -187,7 +197,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   if (ext === ".html") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, url);
     let pageHtml = parsed.content;
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
@@ -244,7 +254,11 @@ function serve(outDir, port = 4173) {
   const server = createServer(async (req, res) => {
     const urlPath = decodeURI((req.url || "/").split("?")[0]);
     const safePath = urlPath.replace(/\.\.+/g, "");
-    let filePath = join(outDir, safePath);
+    const requestPath = safePath.replace(/^\/+/, "") || "index.html";
+    let filePath = join(outDir, requestPath);
+    const notFoundPath = join(outDir, "404.html");
+    const indexPath = join(outDir, "index.html");
+    let isNotFoundResponse = false;
     let stats;
 
     try {
@@ -254,13 +268,18 @@ function serve(outDir, port = 4173) {
         stats = await stat(filePath);
       }
     } catch {
-      filePath = join(outDir, "index.html");
+      if (existsSync(notFoundPath)) {
+        filePath = notFoundPath;
+        isNotFoundResponse = true;
+      } else {
+        filePath = indexPath;
+      }
     }
 
     try {
       const data = await readFile(filePath);
       const type = mime[extname(filePath).toLowerCase()] || "text/plain";
-      res.writeHead(200, { "Content-Type": type });
+      res.writeHead(isNotFoundResponse ? 404 : 200, { "Content-Type": type });
       res.end(data);
     } catch {
       res.writeHead(404, { "Content-Type": "text/plain" });
