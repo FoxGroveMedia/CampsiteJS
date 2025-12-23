@@ -1,10 +1,9 @@
-# ⛺ Campsite Monorepo
+# ⛺ Campsite - A Cozy Static Site Generator
 Welcome to Campsite, the static site generator that feels like a weekend in the woods. Pack light, pitch fast, and ship sites with a cozy developer experience.
 
 ## 🗺️ Trail Map
 - packages/create-campsite — scaffolder invoked via `npm create campsite@latest`
 - packages/basecamp — the build/dev/serve engine
-- campsite01 — example site in this repo; scaffolder output defaults to `campsite-site`
 
 ## 🏕️ Why Camp With Us?
 - Quick setup: new sites in a few prompts
@@ -14,8 +13,8 @@ Welcome to Campsite, the static site generator that feels like a weekend in the 
 
 ## 🚀 Fast Start (New Site)
 ```
-npm create campsite@latest my-campsite
-cd my-campsite
+npm create campsite@latest my-campsite-name
+cd my-campsite-name
 npm install
 npm run dev
 ```
