@@ -154,15 +154,11 @@ function toUrlPath(outRel) {
   return `/${normalized}`;
 }
 
-function pageContext(frontmatter, html, config, relPath, data, url = "/") {
+function pageContext(frontmatter, html, config, relPath, data, path = "/") {
   return {
     site: { name: config.siteName, config },
-    page: { ...frontmatter, content: html, source: relPath, url },
-    frontmatter,
-    content: html,
-    data,
-    collections: data,
-    ...data
+    page: { ...frontmatter, content: html, source: relPath, path },
+    collections: data
   };
 }
 
@@ -176,8 +172,9 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv) {
   const ext = extname(layoutName).toLowerCase();
   const layoutCtx = {
     ...ctx,
+    frontmatter: ctx.page || {},
     content: html,
-    title: ctx.frontmatter?.title ?? ctx.page?.title ?? ctx.site?.name
+    title: ctx.page?.title ?? ctx.site?.name
   };
 
   if (ext === ".njk") {
@@ -197,14 +194,14 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   const ext = extname(filePath).toLowerCase();
   const outRel = rel.replace(/\.liquid(\.html)?$/i, ".html").replace(ext, ".html");
   const outPath = join(outDir, outRel);
-  const url = toUrlPath(outRel);
+  const path = toUrlPath(outRel);
   await ensureDir(dirname(outPath));
 
   if (ext === ".md") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
     const html = md.render(parsed.content);
-    const ctx = pageContext(parsed.data, html, config, rel, data, url);
+    const ctx = pageContext(parsed.data, html, config, rel, data, path);
     const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv);
     await writeFile(outPath, rendered, "utf8");
     return;
@@ -213,7 +210,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   if (ext === ".njk") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, url);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
     const templateName = rel.replace(/\\/g, "/");
     let pageHtml = env.renderString(parsed.content, ctx, { path: templateName });
     if (shouldRenderMarkdown(parsed.data, config, false)) {
@@ -227,7 +224,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   if (ext === ".liquid" || filePath.toLowerCase().endsWith(".liquid.html")) {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, url);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
     let pageHtml = await liquidEnv.parseAndRender(parsed.content, ctx);
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
@@ -240,7 +237,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
   if (ext === ".html") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, url);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
     let pageHtml = parsed.content;
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);

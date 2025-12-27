@@ -1,4 +1,4 @@
-{% set meta_title = frontmatter.title or title or site.name %}{% set meta_description = frontmatter.description or page.description or "A cozy Campsite starter." %}{% set meta_url = frontmatter.canonical or frontmatter.url %}<!doctype html>
+{% set meta_title = frontmatter.title or title or site.name %}{% set meta_description = frontmatter.description or page.description or "A cozy CampsiteJS starter." %}{% set meta_url = frontmatter.canonical or frontmatter.url %}<!doctype html>
 <html lang="en" class="min-h-screen bg-radial bg-gradient-to-br from-campfire-900 from-10% to-black to-90%">
 <head>
   <meta charset="UTF-8">
@@ -52,13 +52,13 @@
         {{ content | safe }}{% else %}
         <section class="hero">
           <p class="eyebrow">Campfire ready</p>
-          <h1>Welcome to Campsite</h1>
+          <h1>Welcome to CampsiteJS</h1>
           <p>Edit <code>src/pages/index.md</code> to get started.</p>
         </section>{% endif %}{% endblock %}</div>
     </div>
   </main>
   <footer class="text-xs text-amber-50/40 text-center">
-    <p>Built with <span class="font-semibold text-amber-50/60">Campsite</span>.</p>
+    <p><span class="font-semibold text-amber-50/60">CampsiteJS</span> built with ❤️</p>
   </footer>
 </body>
 </html>
