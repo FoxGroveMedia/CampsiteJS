@@ -1,8 +1,8 @@
 {
   "name": "basecampjs",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
-  "description": "BasecampJS engine for Campsite static site generator.",
+  "description": "BasecampJS engine for CampsiteJS static site generator.",
   "bin": {
     "campsite": "./index.js"
   },
