@@ -147,18 +147,24 @@ function createLiquidEnv(layoutsDir, pagesDir, srcDir) {
 
 function toUrlPath(outRel) {
   const normalized = outRel.replace(/\\/g, "/");
-  if (normalized.endsWith("index.html")) {
-    const trimmed = normalized.slice(0, -"index.html".length);
-    return trimmed ? `/${trimmed}` : "/";
+  let path = `/${normalized}`;
+  // Remove trailing index.html for directory-style URLs
+  if (path.endsWith("index.html")) {
+    path = path.slice(0, -"index.html".length);
   }
-  return `/${normalized}`;
+  // Strip trailing slash except for root
+  if (path !== "/" && path.endsWith("/")) {
+    path = path.slice(0, -1);
+  }
+  return path || "/";
 }
 
 function pageContext(frontmatter, html, config, relPath, data, path = "/") {
   return {
     site: { name: config.siteName, config },
     page: { ...frontmatter, content: html, source: relPath, path },
-    collections: data
+    collections: data,
+    ...data
   };
 }
 
