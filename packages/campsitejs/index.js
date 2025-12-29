@@ -23,6 +23,10 @@ async function getCliVersion() {
   }
 }
 
+async function ensureDir(dir) {
+  await mkdir(dir, { recursive: true });
+}
+
 function formatPackageName(name) {
   return name
     .trim()
@@ -160,15 +164,80 @@ async function updatePackageJson(targetDir, answers) {
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
 }
 
-async function swapPageTemplates(targetDir, answers) {
-  const pageDir = join(targetDir, "src", "pages");
-  if (answers.markdown) {
-    // keep markdown starter; ensure nunjucks variant removed
-    await rm(join(pageDir, "index.njk")).catch(() => {});
-  } else {
-    await rm(join(pageDir, "index.md")).catch(() => {});
-    await cp(join(variantDir, "index.njk"), join(pageDir, "index.njk"));
+async function copyVariantFiles(srcDir, destDir, ext) {
+  if (!existsSync(srcDir)) return;
+  await ensureDir(destDir);
+  const entries = await readdir(srcDir);
+  for (const entry of entries) {
+    if (entry.endsWith(ext)) {
+      await cp(join(srcDir, entry), join(destDir, entry));
+    }
   }
+}
+
+async function applyTemplateVariants(targetDir, answers) {
+  const wantsNunjucks = answers.templateEngines.includes("nunjucks");
+  const wantsLiquid = answers.templateEngines.includes("liquid");
+  const srcRoot = join(targetDir, "src");
+  const layoutsDir = join(srcRoot, "layouts");
+  const pagesDir = join(srcRoot, "pages");
+  const partialsDir = join(srcRoot, "partials");
+
+  // Reset engine-specific dirs
+  await Promise.all([
+    rm(layoutsDir, { recursive: true, force: true }),
+    rm(pagesDir, { recursive: true, force: true }),
+    rm(partialsDir, { recursive: true, force: true })
+  ]);
+  await Promise.all([ensureDir(layoutsDir), ensureDir(pagesDir), ensureDir(partialsDir)]);
+
+  const njkLayouts = join(variantDir, "layouts");
+  const liquidLayouts = join(variantDir, "layouts");
+  const njkPages = join(variantDir, "pages");
+  const liquidPages = join(variantDir, "pages");
+  const njkPartials = join(variantDir, "partials");
+  const liquidPartials = join(variantDir, "partials");
+
+  if (wantsNunjucks) {
+    await copyVariantFiles(njkLayouts, layoutsDir, ".njk");
+    await copyVariantFiles(njkPages, pagesDir, ".njk");
+    await copyVariantFiles(njkPartials, partialsDir, ".njk");
+  }
+
+  if (wantsLiquid) {
+    await copyVariantFiles(liquidLayouts, layoutsDir, ".liquid");
+    await copyVariantFiles(liquidPages, pagesDir, ".liquid");
+    await copyVariantFiles(liquidPartials, partialsDir, ".liquid");
+  }
+
+  // Provide a Markdown starter when requested, pointing at the primary engine layout
+  const primaryEngine = answers.templateEngines[0] || "nunjucks";
+  const mdLayout = primaryEngine === "liquid" ? "base.liquid" : "base.njk";
+
+  if (answers.markdown) {
+    const mdContent = `---
+title: Welcome to CampsiteJS
+layout: ${mdLayout}
+description: Cozy, fast static sites with CampsiteJS.
+---
+
+## Welcome, camper
+
+CampsiteJS sets up a warm starter for Markdown, Nunjucks, Liquid, Vue, and Alpine.
+
+- Edit src/pages/index.md to make it yours.
+- Tweak the layout in src/layouts/${mdLayout}.
+- Add data under src/data/, components in src/components/, and partials in src/partials/.
+
+Happy camping! 🌲🏕️🔥
+`;
+    await writeFile(join(pagesDir, "index.md"), mdContent, "utf8");
+  } else {
+    await rm(join(pagesDir, "index.md"), { force: true }).catch(() => {});
+  }
+
+  // Clean up variant sources from the generated project
+  await rm(join(targetDir, "variants"), { recursive: true, force: true }).catch(() => {});
 }
 
 async function pruneComponents(targetDir, answers) {
@@ -292,7 +361,7 @@ async function main() {
   const targetDir = resolve(process.cwd(), answers.projectName);
   await ensureTargetDir(targetDir);
   await copyBaseTemplate(targetDir);
-  await swapPageTemplates(targetDir, answers);
+  await applyTemplateVariants(targetDir, answers);
   await pruneComponents(targetDir, answers);
   await pruneCssFramework(targetDir, answers);
   await writeConfig(targetDir, answers);

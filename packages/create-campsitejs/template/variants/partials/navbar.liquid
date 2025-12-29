@@ -1,0 +1,10 @@
+<nav class="flex items-center gap-2">
+  {%- assign nav_items = navbar | default: collections.navbar | default: empty -%}
+  {%- for item in nav_items -%}
+    <a href="{{ item.url | default: '#' }}"{%- if item.target %} target="{{ item.target }}"{%- endif %}{%- if item.rel %} rel="{{ item.rel }}"{%- endif %}
+      class="px-2 {% if item.url == page.path -%} active {%- else -%} not-active {%- endif %} {{ item.class }}">
+      {%- if item.label %}{{ item.label }}{%- endif -%}
+      {%- if item.svg %}{{ item.svg }}{%- endif -%}
+    </a>
+  {%- endfor -%}
+</nav>

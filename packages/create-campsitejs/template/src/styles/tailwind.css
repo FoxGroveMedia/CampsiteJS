@@ -4,10 +4,52 @@
 
 @layer base {
   code {
-    @apply bg-campfire-950 text-lime-500 font-mono py-1.5 px-3 rounded-md ml-2;
+    @apply inline-block bg-campfire-950 text-lime-500 font-mono py-1.5 px-3 rounded-md;
+  }
+  pre {
+    @apply py-1 font-mono;
   }
   a {
     @apply text-amber-500 hover:text-white;
+  }
+  nav a.active {
+    @apply text-white underline font-semibold;
+  }
+  nav a.not-active {
+    @apply text-amber-500 hover:text-white hover:underline;
+  }
+  article h1, article h2, article h3, article h4, article h5, article h6 {
+    @apply mb-4 tracking-wide;
+  }
+  article h1 {
+    @apply text-4xl;
+  }
+  article h2 {
+    @apply text-3xl mt-8;
+  }
+  article h3 {
+    @apply text-2xl mt-6;
+  }
+  article h4 {
+    @apply text-xl mt-4;
+  }
+  article h5 {
+    @apply text-lg;
+  }
+  article h6 {
+    @apply text-base mb-0;
+  }
+  article p {
+    @apply mb-4;
+  }
+  article ul {
+    @apply list-disc list-inside mb-8 pl-4;
+  }
+  article ol {
+    @apply list-decimal list-inside mb-8 pl-4;
+  }
+  article ol li, article ul li {
+    @apply mb-2;
   }
 }
 

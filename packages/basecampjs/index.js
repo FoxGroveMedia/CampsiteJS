@@ -128,18 +128,20 @@ async function walkFiles(dir) {
   return results;
 }
 
-function createNunjucksEnv(layoutsDir, pagesDir, srcDir) {
-  // Allow templates to resolve from layouts, pages, or the src root
+function createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
+  // Allow templates to resolve from layouts, partials, pages, or the src root
+  const searchPaths = [layoutsDir, partialsDir, pagesDir, srcDir].filter(Boolean);
   return new nunjucks.Environment(
-    new nunjucks.FileSystemLoader([layoutsDir, pagesDir, srcDir], { noCache: true }),
+    new nunjucks.FileSystemLoader(searchPaths, { noCache: true }),
     { autoescape: false }
   );
 }
 
-function createLiquidEnv(layoutsDir, pagesDir, srcDir) {
+function createLiquidEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
   // Liquid loader will search these roots for partials/layouts
+  const root = [layoutsDir, partialsDir, pagesDir, srcDir].filter(Boolean);
   return new Liquid({
-    root: [layoutsDir, pagesDir, srcDir],
+    root,
     extname: ".liquid",
     cache: false
   });
@@ -261,11 +263,12 @@ async function build(cwdArg = cwd) {
   const srcDir = resolve(cwdArg, config.srcDir || "src");
   const pagesDir = join(srcDir, "pages");
   const layoutsDir = join(srcDir, "layouts");
+  const partialsDir = join(srcDir, "partials");
   const dataDir = join(srcDir, "data");
   const publicDir = resolve(cwdArg, "public");
   const outDir = resolve(cwdArg, config.outDir || "dist");
-  const env = createNunjucksEnv(layoutsDir, pagesDir, srcDir);
-  const liquidEnv = createLiquidEnv(layoutsDir, pagesDir, srcDir);
+  const env = createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir);
+  const liquidEnv = createLiquidEnv(layoutsDir, pagesDir, srcDir, partialsDir);
   const data = await loadData(dataDir);
 
   await cleanDir(outDir);
