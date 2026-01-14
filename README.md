@@ -11,7 +11,7 @@ Welcome to CampsiteJS, the static site generator that feels like a weekend in th
 
 ## 🏕️ Why Camp With Us?
 - Quick setup: new sites in a few prompts
-- Flexible templating: Markdown, Nunjucks, Liquid, optional Vue/Alpine sprinkles
+- Flexible templating: Mustache, Markdown, Nunjucks, Liquid, optional Vue/Alpine sprinkles
 - Friendly defaults: warm colors, simple layouts, and Tailwind-ready styles
 - Batteries included: dev server, file watcher, and static output to `campsite/`, or choose your own build directory
 
@@ -21,17 +21,17 @@ npm create campsitejs@latest my-campsite-name
 ```
 - Choose your site name when prompted
 - Select to include Markdown + Frontmatter support (yes/no)
-- Choose if you want to enable image optimization, coming soon! (yes/no)
-- Choose your template languages (Nunjucks/Liquid/Vue/Alpine)
+- Choose your template languages (Mustache/Nunjucks/Liquid)
 - Choose to include JS framework support (Vue/Alpine/None)
 - Choose to include CSS framework support (Tailwind/Bootstrap/Foundation/Bulma/None)
+- Choose to enable cache busting for CSS/JS assets (yes/no)
+- Choose to enable HTML/CSS minification (yes/no)
 - Choose your package manager (npm/yarn/pnpm/bun)
 - Then choose to install dependencies right away (yes/no)
 
 Then navigate to your new campsite folder:
 ```
 cd my-campsite-name
-npm install
 npm run dev
 ```
 - Swap `_gitignore` to `.gitignore` is handled automatically by the scaffolder
@@ -59,16 +59,13 @@ npm run dev
 - campsite-site — sample consumer with `src/pages`, `src/layouts`, `public`
 
 ## 🔥 Core Concepts
-- Config: `campsite.config.js` controls `siteName`, `srcDir`, `outDir`, engines, integrations
-- Pages: Markdown with frontmatter or `.njk` templates; other files copy through
-- Layouts: Nunjucks defaults with a base layout and content block
-- Dev loop: file watcher rebuilds on change; output served from `campsite/`
-- Partials: reusable snippets in `src/partials/`
-- Static assets: copy `public/` to `campsite/` on build
-- Cache busting: enable `cacheBustAssets: true` in config to add content hashes to CSS/JS filenames (e.g., `style.css` → `style-a7e4fj3f9g.css`) and automatically update HTML references on build
+- Config: `campsite.config.js` controls `siteName`, `srcDir`, `outDir`, engines, integrations.
+- Pages: Markdown with frontmatter or `.njk` templates; other files copy through.
+- Layouts: Nunjucks defaults with a base layout and content block.
+- Dev loop: file watcher rebuilds on change; output served from `campsite/`.
+- Partials: reusable snippets in `src/partials/`.
+- Static assets: basecamp will transfer your gear from `public/` to your new `campsite/` on build automatically.
+- Cache busting: enable `cacheBustAssets: true` in config to add content hashes to CSS/JS filenames (e.g., `style.css` → `style-a7e4fj3f9g.css`) and automatically update HTML references on build.
 
 ## 🤝 Contributing
-Pull up a camp chair and open a PR. Keep it cozy, documented, and easy to extend. Tests and linting are coming soon.
-
-## 📜 License
-MIT
+Pull up a camp chair and open a PR. Keep it cozy, documented, and easy to extend.
