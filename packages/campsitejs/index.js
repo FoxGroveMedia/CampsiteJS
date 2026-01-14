@@ -86,11 +86,13 @@ async function writeConfig(targetDir, answers) {
   outDir: "dist",
   templateEngine: "${primaryEngine}",
   markdown: ${answers.markdown},
-  minifyCSS: false,
-  minifyHTML: false,
+  minifyCSS: ${answers.minifyAssets},
+  minifyHTML: ${answers.minifyAssets},
+  cacheBustAssets: ${answers.cacheBustAssets}, // Add content hashes to JS/CSS filenames
   integrations: {
     nunjucks: ${answers.templateEngines.includes("nunjucks")},
     liquid: ${answers.templateEngines.includes("liquid")},
+    mustache: ${answers.templateEngines.includes("mustache")},
     vue: ${answers.jsFrameworks.includes("vue")},
     alpine: ${answers.jsFrameworks.includes("alpine")}
   }
@@ -118,6 +120,7 @@ async function updatePackageJson(targetDir, answers) {
   if (answers.markdown) devDeps["markdown-it"] = "^14.1.0";
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
+  if (answers.templateEngines.includes("mustache")) devDeps["mustache"] = "^4.2.0";
   if (answers.jsFrameworks.includes("vue")) deps["vue"] = "^3.4.0";
   if (answers.jsFrameworks.includes("alpine")) deps["alpinejs"] = "^3.13.0";
 
@@ -178,6 +181,7 @@ async function copyVariantFiles(srcDir, destDir, ext) {
 async function applyTemplateVariants(targetDir, answers) {
   const wantsNunjucks = answers.templateEngines.includes("nunjucks");
   const wantsLiquid = answers.templateEngines.includes("liquid");
+  const wantsMustache = answers.templateEngines.includes("mustache");
   const srcRoot = join(targetDir, "src");
   const layoutsDir = join(srcRoot, "layouts");
   const pagesDir = join(srcRoot, "pages");
@@ -193,10 +197,13 @@ async function applyTemplateVariants(targetDir, answers) {
 
   const njkLayouts = join(variantDir, "layouts");
   const liquidLayouts = join(variantDir, "layouts");
+  const mustacheLayouts = join(variantDir, "layouts");
   const njkPages = join(variantDir, "pages");
   const liquidPages = join(variantDir, "pages");
+  const mustachePages = join(variantDir, "pages");
   const njkPartials = join(variantDir, "partials");
   const liquidPartials = join(variantDir, "partials");
+  const mustachePartials = join(variantDir, "partials");
 
   if (wantsNunjucks) {
     await copyVariantFiles(njkLayouts, layoutsDir, ".njk");
@@ -210,9 +217,16 @@ async function applyTemplateVariants(targetDir, answers) {
     await copyVariantFiles(liquidPartials, partialsDir, ".liquid");
   }
 
+  if (wantsMustache) {
+    await copyVariantFiles(mustacheLayouts, layoutsDir, ".mustache");
+    await copyVariantFiles(mustachePages, pagesDir, ".mustache");
+    await copyVariantFiles(mustachePartials, partialsDir, ".mustache");
+  }
+
   // Provide a Markdown starter when requested, pointing at the primary engine layout
   const primaryEngine = answers.templateEngines[0] || "nunjucks";
-  const mdLayout = primaryEngine === "liquid" ? "base.liquid" : "base.njk";
+  const layoutExtMap = { liquid: "base.liquid", mustache: "base.mustache", nunjucks: "base.njk" };
+  const mdLayout = layoutExtMap[primaryEngine] || "base.njk";
 
   if (answers.markdown) {
     const mdContent = `---
@@ -298,13 +312,14 @@ async function main() {
     {
       type: "multiselect",
       name: "templateEngines",
-      message: "Choose templating engines",
+      message: "Choose templating languages",
       hint: "Use space to toggle, enter to confirm",
       instructions: false,
       min: 1,
       choices: [
         { title: "Nunjucks", value: "nunjucks", selected: true },
-        { title: "Liquid", value: "liquid" }
+        { title: "Liquid", value: "liquid" },
+        { title: "Mustache", value: "mustache" }
       ]
     },
     {
@@ -330,6 +345,22 @@ async function main() {
         { title: "Foundation", value: "foundation" },
         { title: "Bulma", value: "bulma" }
       ]
+    },
+    {
+      type: "toggle",
+      name: "cacheBustAssets",
+      message: "Enable cache busting for CSS/JS assets?",
+      initial: true,
+      active: "yes",
+      inactive: "no"
+    },
+    {
+      type: "toggle",
+      name: "minifyAssets",
+      message: "Minify CSS and HTML assets?",
+      initial: true,
+      active: "yes",
+      inactive: "no"
     },
     {
       type: "select",

@@ -65,6 +65,7 @@ npm run dev
 - Dev loop: file watcher rebuilds on change; output served from `campsite/`
 - Partials: reusable snippets in `src/partials/`
 - Static assets: copy `public/` to `campsite/` on build
+- Cache busting: enable `cacheBustAssets: true` in config to add content hashes to CSS/JS filenames (e.g., `style.css` → `style-a7e4fj3f9g.css`) and automatically update HTML references on build
 
 ## 🤝 Contributing
 Pull up a camp chair and open a PR. Keep it cozy, documented, and easy to extend. Tests and linting are coming soon.

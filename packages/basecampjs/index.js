@@ -2,13 +2,15 @@
 import { argv, exit } from "process";
 import { createServer } from "http";
 import { existsSync } from "fs";
-import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "fs/promises";
+import { cp, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "path";
 import { pathToFileURL } from "url";
+import { createHash } from "crypto";
 import * as kolor from "kolorist";
 import chokidar from "chokidar";
 import matter from "gray-matter";
 import MarkdownIt from "markdown-it";
+import Mustache from "mustache";
 import nunjucks from "nunjucks";
 import { Liquid } from "liquidjs";
 import { minify as minifyCss } from "csso";
@@ -25,7 +27,8 @@ const defaultConfig = {
   markdown: true,
   minifyCSS: false,
   minifyHTML: false,
-  integrations: { nunjucks: true, liquid: false, vue: false, alpine: false }
+  cacheBustAssets: false,
+  integrations: { nunjucks: true, liquid: false, mustache: false, vue: false, alpine: false }
 };
 
 async function loadConfig(root) {
@@ -175,7 +178,7 @@ function shouldRenderMarkdown(frontmatter, config, defaultValue) {
   return defaultValue;
 }
 
-async function renderWithLayout(layoutName, html, ctx, env, liquidEnv) {
+async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDir) {
   if (!layoutName) return html;
   const ext = extname(layoutName).toLowerCase();
   const layoutCtx = {
@@ -191,6 +194,14 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv) {
 
   if (ext === ".liquid" || layoutName.toLowerCase().endsWith(".liquid.html")) {
     return liquidEnv.renderFile(layoutName, layoutCtx);
+  }
+
+  if (ext === ".mustache") {
+    const layoutPath = join(layoutsDir, layoutName);
+    if (existsSync(layoutPath)) {
+      const layoutTemplate = await readFile(layoutPath, "utf8");
+      return Mustache.render(layoutTemplate, layoutCtx);
+    }
   }
 
   // Unknown layout type, return unwrapped content
@@ -210,7 +221,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     const parsed = matter(raw);
     const html = md.render(parsed.content);
     const ctx = pageContext(parsed.data, html, config, rel, data, path);
-    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv);
+    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv, layoutsDir);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -224,7 +235,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -237,7 +248,20 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    await writeFile(outPath, rendered, "utf8");
+    return;
+  }
+
+  if (ext === ".mustache") {
+    const raw = await readFile(filePath, "utf8");
+    const parsed = matter(raw);
+    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
+    let pageHtml = Mustache.render(parsed.content, ctx);
+    if (shouldRenderMarkdown(parsed.data, config, false)) {
+      pageHtml = md.render(pageHtml);
+    }
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -250,12 +274,94 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
 
   await cp(filePath, outPath);
+}
+
+async function cacheBustAssets(outDir) {
+  const assetMap = {}; // original path -> hashed path
+  const files = await walkFiles(outDir);
+  const assetFiles = files.filter((file) => {
+    const ext = extname(file).toLowerCase();
+    return ext === ".css" || ext === ".js";
+  });
+
+  // Hash and rename each asset
+  for (const file of assetFiles) {
+    try {
+      const content = await readFile(file);
+      const hash = createHash("sha256").update(content).digest("hex").slice(0, 10);
+      const ext = extname(file);
+      const base = basename(file, ext);
+      const dir = dirname(file);
+      const hashedName = `${base}-${hash}${ext}`;
+      const hashedPath = join(dir, hashedName);
+      
+      await rename(file, hashedPath);
+      
+      // Store mapping of original relative path to hashed relative path
+      const originalRel = relative(outDir, file).replace(/\\/g, "/");
+      const hashedRel = relative(outDir, hashedPath).replace(/\\/g, "/");
+      assetMap[originalRel] = hashedRel;
+      
+      // Log the cache-busted file
+      console.log(kolor.dim(`  ${originalRel}`) + kolor.cyan(` → `) + kolor.green(hashedRel));
+    } catch (err) {
+      console.error(kolor.red(`Failed to cache-bust ${relative(outDir, file)}: ${err.message}`));
+    }
+  }
+
+  // Update HTML files to reference hashed assets
+  const htmlFiles = files.filter((file) => extname(file).toLowerCase() === ".html");
+  
+  for (const htmlFile of htmlFiles) {
+    try {
+      let html = await readFile(htmlFile, "utf8");
+      let updated = false;
+
+      // Update <link> tags (CSS)
+      for (const [original, hashed] of Object.entries(assetMap)) {
+        if (original.endsWith(".css")) {
+          // Match href="/path" or href="path" but ensure we stay within the tag
+          const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const pattern = new RegExp(`(<link[^>]*?\\shref=["'])/?${escaped}(["'])`, "gi");
+          
+          const newHtml = html.replace(pattern, `$1/${hashed}$2`);
+          if (newHtml !== html) {
+            html = newHtml;
+            updated = true;
+          }
+        }
+      }
+
+      // Update <script> tags (JS)
+      for (const [original, hashed] of Object.entries(assetMap)) {
+        if (original.endsWith(".js")) {
+          // Match src="/path" or src="path" but ensure we stay within the tag
+          const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const pattern = new RegExp(`(<script[^>]*?\\ssrc=["'])/?${escaped}(["'])`, "gi");
+          
+          const newHtml = html.replace(pattern, `$1/${hashed}$2`);
+          if (newHtml !== html) {
+            html = newHtml;
+            updated = true;
+          }
+        }
+      }
+
+      if (updated) {
+        await writeFile(htmlFile, html, "utf8");
+      }
+    } catch (err) {
+      console.error(kolor.red(`Failed to update asset references in ${relative(outDir, htmlFile)}: ${err.message}`));
+    }
+  }
+
+  return assetMap;
 }
 
 async function build(cwdArg = cwd) {
@@ -306,6 +412,17 @@ async function build(cwdArg = cwd) {
   if (config.minifyHTML) {
     await minifyHTMLFiles(outDir, config);
     console.log(kolor.green("HTML minified"));
+  }
+
+  if (config.cacheBustAssets) {
+    console.log(kolor.cyan("Cache-busting assets..."));
+    const assetMap = await cacheBustAssets(outDir);
+    const assetCount = Object.keys(assetMap).length;
+    if (assetCount > 0) {
+      console.log(kolor.green(`✓ Cache-busted ${assetCount} asset(s)`));
+    } else {
+      console.log(kolor.yellow("No assets found to cache-bust"));
+    }
   }
 
   console.log(kolor.green(`Built ${files.length} page(s) → ${relative(cwdArg, outDir)}`));
