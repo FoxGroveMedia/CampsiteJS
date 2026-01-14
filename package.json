@@ -2,7 +2,7 @@
   "name": "campsite",
   "private": true,
   "type": "module",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Monorepo for Campsite static site generator and campsitejs CLI.",
   "license": "MIT",
   "packageManager": "npm@10.9.0",
