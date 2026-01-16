@@ -23,6 +23,35 @@ async function getCliVersion() {
   }
 }
 
+function showHelp(version) {
+  console.log(kleur.bold().cyan(`\n🏕️  CampsiteJS v${version}`));
+  console.log(kleur.dim("Create a new static site with CampsiteJS.\n"));
+  
+  console.log(kleur.bold("Usage:"));
+  console.log("  npm create campsitejs@latest [project-name]");
+  console.log("  npx campsitejs [project-name]\n");
+  
+  console.log(kleur.bold("Options:"));
+  console.log("  -h, --help     Show this help message");
+  console.log("  -v, --version  Show version number\n");
+  
+  console.log(kleur.bold("Examples:"));
+  console.log("  " + kleur.dim("# Create a new project interactively"));
+  console.log("  npm create campsitejs@latest");
+  console.log("  " + kleur.dim("# Create with a specific name"));
+  console.log("  npm create campsitejs@latest my-site\n");
+  
+  console.log(kleur.bold("After Setup:"));
+  console.log("  cd your-project-name");
+  console.log("  campsite dev          " + kleur.dim("# Start development server"));
+  console.log("  campsite build        " + kleur.dim("# Build for production"));
+  console.log("  campsite make:page    " + kleur.dim("# Create new content"));
+  console.log("  campsite --help       " + kleur.dim("# See all available commands\n"));
+  
+  console.log(kleur.dim("For more information, visit: https://campsitejs.dev"));
+  console.log();
+}
+
 async function ensureDir(dir) {
   await mkdir(dir, { recursive: true });
 }
@@ -241,7 +270,7 @@ CampsiteJS sets up a warm starter for Markdown, Nunjucks, Liquid, Vue, and Alpin
 
 - Edit src/pages/index.md to make it yours.
 - Tweak the layout in src/layouts/${mdLayout}.
-- Add data under src/data/, components in src/components/, and partials in src/partials/.
+- Add data under src/collections/, components in src/components/, and partials in src/partials/.
 
 Happy camping! 🌲🏕️🔥
 `;
@@ -289,10 +318,23 @@ async function installDependencies(targetDir, packageManager) {
 
 async function main() {
   const version = await getCliVersion();
-  console.log(kleur.bold().cyan(`\n🏕️  Welcome to CampSiteJS v${version}`));
+  const firstArg = process.argv[2];
+
+  // Handle flags
+  if (firstArg === "-h" || firstArg === "--help") {
+    showHelp(version);
+    process.exit(0);
+  }
+
+  if (firstArg === "-v" || firstArg === "--version") {
+    console.log(`v${version}`);
+    process.exit(0);
+  }
+
+  console.log(kleur.bold().cyan(`\n🏕️  Welcome to CampsiteJS v${version}`));
   console.log(kleur.dim("Build a cozy static campsite in seconds.\n"));
 
-  const argProjectName = process.argv[2];
+  const argProjectName = firstArg;
   const defaultProjectName = argProjectName || nextCampsiteName(process.cwd());
   const answers = await prompts([
     {
