@@ -1,9 +1,10 @@
 {
   "name": "basecampjs",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "type": "module",
   "description": "BasecampJS engine for CampsiteJS static site generator.",
   "bin": {
+    "camper": "./index.js",
     "campsite": "./index.js"
   },
   "license": "MIT",

@@ -203,7 +203,7 @@ All notable changes to CampsiteJS will be documented in this file.
 - **Markdown**: Full markdown-it support with frontmatter
 - **JS Frameworks**: Alpine.js, Vue.js
 - **CSS**: Tailwind CSS out of the box
-- **CLI**: `campsite dev`, `campsite build`, `campsite serve`
+- **CLI**: `camper dev`, `camper build`, `camper serve` (previous `campsite` remains as an alias)
 - **Project Structure**: `src/pages/`, `src/layouts/`, `src/components/`
 
 ---

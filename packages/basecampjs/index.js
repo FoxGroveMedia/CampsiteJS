@@ -70,7 +70,7 @@ function showHelp() {
   console.log(kolor.dim("Build and manage your static campsite.\n"));
   
   console.log(kolor.bold("Usage:"));
-  console.log("  campsite <command> [arguments] [options]\n");
+  console.log("  camper <command> [arguments] [options]\n");
   
   console.log(kolor.bold("Project Commands:"));
   console.log("  " + kolor.cyan("init") + "              Initialize a new Campsite project in current directory");
@@ -110,15 +110,15 @@ function showHelp() {
   
   console.log(kolor.bold("Examples:"));
   console.log("  " + kolor.dim("# Initialize a new project"));
-  console.log("  campsite init\n");
+  console.log("  camper init\n");
   console.log("  " + kolor.dim("# Start development"));
-  console.log("  campsite dev\n");
+  console.log("  camper dev\n");
   console.log("  " + kolor.dim("# Create new content"));
-  console.log("  campsite make:page about");
-  console.log("  campsite make:post \"My First Post\"");
-  console.log("  campsite make:collection products\n");
+  console.log("  camper make:page about");
+  console.log("  camper make:post \"My First Post\"");
+  console.log("  camper make:collection products\n");
   console.log("  " + kolor.dim("# Build and preview"));
-  console.log("  campsite preview\n");
+  console.log("  camper preview\n");
   console.log(kolor.dim("For more information, visit: https://campsitejs.dev"));
   console.log();
 }
@@ -789,17 +789,17 @@ async function makeContent(type) {
   
   if (args.length === 0) {
     console.log(kolor.red("❌ Missing name argument"));
-    console.log(kolor.dim(`Usage: campsite make:${type} <name> [name2, name3, ...]`));
+    console.log(kolor.dim(`Usage: camper make:${type} <name> [name2, name3, ...]`));
     console.log(kolor.dim("\nExamples:"));
-    console.log(kolor.dim("  campsite make:page about"));
-    console.log(kolor.dim("  campsite make:page home, about, contact"));
-    console.log(kolor.dim("  campsite make:collection products, categories\n"));
+    console.log(kolor.dim("  camper make:page about"));
+    console.log(kolor.dim("  camper make:page home, about, contact"));
+    console.log(kolor.dim("  camper make:collection products, categories\n"));
     exit(1);
   }
 
   // Join all args and split by comma to support both formats:
-  // campsite make:page home about contact
-  // campsite make:page home, about, contact
+  // camper make:page home about contact
+  // camper make:page home, about, contact
   const namesString = args.join(" ");
   const names = namesString.split(",").map(n => n.trim()).filter(n => n.length > 0);
 
@@ -1024,7 +1024,7 @@ async function init() {
   // Check if already initialized
   if (existsSync(join(targetDir, "campsite.config.js"))) {
     console.log(kolor.yellow("⚠️  This directory already has a campsite.config.js file."));
-    console.log(kolor.dim("Run 'campsite dev' to start developing.\n"));
+    console.log(kolor.dim("Run 'camper dev' to start developing.\n"));
     return;
   }
 
@@ -1087,7 +1087,7 @@ Your cozy static site is ready to build.
 
 ## Get Started
 
-- Run \`campsite dev\` to start developing
+- Run \`camper dev\` to start developing
 - Edit pages in \`src/pages/\`
 - Customize layouts in \`src/layouts/\`
 
@@ -1128,10 +1128,10 @@ dist/
     version: "0.0.1",
     type: "module",
     scripts: {
-      dev: "campsite dev",
-      build: "campsite build",
-      serve: "campsite serve",
-      preview: "campsite preview"
+      dev: "camper dev",
+      build: "camper build",
+      serve: "camper serve",
+      preview: "camper preview"
     },
     dependencies: {
       basecampjs: "^0.0.8"
@@ -1142,7 +1142,7 @@ dist/
   console.log(kolor.green("✅ Campsite initialized successfully!\n"));
   console.log(kolor.bold("Next steps:"));
   console.log(kolor.dim("  1. Install dependencies: npm install"));
-  console.log(kolor.dim("  2. Start developing: campsite dev\n"));
+  console.log(kolor.dim("  2. Start developing: camper dev\n"));
 }
 
 async function clean() {
@@ -1167,7 +1167,7 @@ async function check() {
   const configPath = join(cwd, "campsite.config.js");
   if (!existsSync(configPath)) {
     console.log(kolor.red("❌ campsite.config.js not found"));
-    console.log(kolor.dim("   Run 'campsite init' to initialize a project\n"));
+    console.log(kolor.dim("   Run 'camper init' to initialize a project\n"));
     hasIssues = true;
   } else {
     console.log(kolor.green("✅ campsite.config.js found"));
@@ -1300,7 +1300,7 @@ async function upgrade() {
         } catch {}
         
         console.log();
-        console.log(kolor.dim("🌲 Tip: Run 'campsite dev' to start developing with the latest version\n"));
+        console.log(kolor.dim("🌲 Tip: Run 'camper dev' to start developing with the latest version\n"));
         resolve();
       } else {
         console.log();
@@ -1403,7 +1403,7 @@ async function list() {
     }
   }
 
-  console.log(kolor.dim("🌲 Tip: Use 'campsite make:<type> <name>' to create new content\n"));
+  console.log(kolor.dim("🌲 Tip: Use 'camper make:<type> <name>' to create new content\n"));
 }
 
 async function preview() {
@@ -1436,7 +1436,7 @@ async function main() {
     const type = command.substring(5); // Remove 'make:' prefix
     if (!type) {
       console.log(kolor.red("❌ No type specified"));
-      console.log(kolor.dim("Run 'campsite --help' for available make commands.\n"));
+      console.log(kolor.dim("Run 'camper --help' for available make commands.\n"));
       exit(1);
     }
     await makeContent(type);
@@ -1479,7 +1479,7 @@ async function main() {
       break;
     default:
       console.log(kolor.yellow(`Unknown command: ${command}`));
-      console.log(kolor.dim("Run 'campsite --help' for usage information."));
+      console.log(kolor.dim("Run 'camper --help' for usage information."));
       exit(1);
   }
 }
