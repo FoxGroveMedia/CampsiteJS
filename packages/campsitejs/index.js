@@ -109,6 +109,11 @@ async function copyBaseTemplate(targetDir) {
 async function writeConfig(targetDir, answers) {
   const configPath = join(targetDir, "campsite.config.js");
   const primaryEngine = answers.templateEngines[0] || "nunjucks";
+  const photoFormats = answers.photoCompression.length > 0 
+    ? JSON.stringify(answers.photoCompression)
+    : "[]";
+  const compressPhotos = answers.photoCompression.length > 0;
+  
   const config = `export default {
   siteName: "${answers.projectName}",
   srcDir: "src",
@@ -118,6 +123,13 @@ async function writeConfig(targetDir, answers) {
   minifyCSS: ${answers.minifyAssets},
   minifyHTML: ${answers.minifyAssets},
   cacheBustAssets: ${answers.cacheBustAssets}, // Add content hashes to JS/CSS filenames
+  compressPhotos: ${compressPhotos},
+  compressionSettings: {
+    quality: 80,
+    formats: ${photoFormats},
+    inputFormats: [".jpg", ".jpeg", ".png"],
+    preserveOriginal: true
+  },
   integrations: {
     nunjucks: ${answers.templateEngines.includes("nunjucks")},
     liquid: ${answers.templateEngines.includes("liquid")},
@@ -167,10 +179,10 @@ async function updatePackageJson(targetDir, answers) {
   });
 
   if (cssFramework === "tailwind") {
-    devDeps["tailwindcss"] = "^3.4.13";
+    devDeps["tailwindcss"] = "^4.1.18";
     devDeps["npm-run-all"] = "^4.1.5";
-    pkg.scripts["build:css"] = "tailwindcss -c tailwind.config.cjs -i ./src/styles/tailwind.css -o ./public/style.css --minify";
-    pkg.scripts["dev:css"] = "tailwindcss -c tailwind.config.cjs -i ./src/styles/tailwind.css -o ./public/style.css --watch";
+    pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify";
+    pkg.scripts["dev:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --watch";
     pkg.scripts["dev:site"] = "campsite dev";
     pkg.scripts["dev"] = "npm-run-all -p dev:css dev:site";
     pkg.scripts["prebuild"] = "npm run build:css";
@@ -296,7 +308,6 @@ async function pruneComponents(targetDir, answers) {
 async function pruneCssFramework(targetDir, answers) {
   if (answers.cssFramework === "tailwind") return;
   const tailwindFiles = [
-    join(targetDir, "tailwind.config.cjs"),
     join(targetDir, "src", "styles", "tailwind.css")
   ];
   await Promise.all(tailwindFiles.map((file) => rm(file).catch(() => {})));
@@ -403,6 +414,18 @@ async function main() {
       initial: true,
       active: "yes",
       inactive: "no"
+    },
+    {
+      type: "multiselect",
+      name: "photoCompression",
+      message: "Photo compression formats",
+      hint: "Use space to toggle, enter to confirm",
+      instructions: false,
+      min: 0,
+      choices: [
+        { title: "WebP", value: ".webp", selected: true },
+        { title: "AVIF", value: ".avif", selected: true }
+      ]
     },
     {
       type: "select",

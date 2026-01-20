@@ -1,6 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-campfire-50: #fff0e5;
+  --color-campfire-100: #ffe1cc;
+  --color-campfire-200: #ffc499;
+  --color-campfire-300: #ffa666;
+  --color-campfire-400: #ff8833;
+  --color-campfire-500: #ff6a00;
+  --color-campfire-600: #cc5500;
+  --color-campfire-700: #994000;
+  --color-campfire-800: #662b00;
+  --color-campfire-900: #331500;
+  --color-campfire-950: #0a0501;
+
+  --color-grove-ink: #0b0c10;
+  --color-grove-foam: #f4ede0;
+  --color-grove-glow: #f97316;
+  --color-grove-forest: #1f5130;
+
+  --font-family-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-family-mono: "JetBrains Mono", Menlo, Consolas, monospace;
+}
 
 @layer base {
   code {

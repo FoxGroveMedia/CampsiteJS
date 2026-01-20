@@ -1,6 +1,6 @@
 {
   "name": "basecampjs",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "type": "module",
   "description": "BasecampJS engine for CampsiteJS static site generator.",
   "bin": {
@@ -19,7 +19,8 @@
     "liquidjs": "^10.12.0",
     "markdown-it": "^14.1.0",
     "mustache": "^4.2.0",
-    "nunjucks": "^3.2.4"
+    "nunjucks": "^3.2.4",
+    "sharp": "^0.33.5"
   },
   "engines": {
     "node": ">=18"

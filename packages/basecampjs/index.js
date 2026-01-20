@@ -15,6 +15,7 @@ import nunjucks from "nunjucks";
 import { Liquid } from "liquidjs";
 import { minify as minifyCss } from "csso";
 import { minify as minifyHtml } from "html-minifier-terser";
+import sharp from "sharp";
 
 const cwd = process.cwd();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,14 @@ const defaultConfig = {
   minifyCSS: false,
   minifyHTML: false,
   cacheBustAssets: false,
+  excludeFiles: [],
+  compressPhotos: false,
+  compressionSettings: {
+    quality: 80,
+    formats: [".webp"],
+    inputFormats: [".jpg", ".jpeg", ".png"],
+    preserveOriginal: true
+  },
   integrations: { nunjucks: true, liquid: false, mustache: false, vue: false, alpine: false }
 };
 
@@ -145,10 +154,164 @@ async function cleanDir(dir) {
   await mkdir(dir, { recursive: true });
 }
 
-async function copyPublic(publicDir, outDir) {
-  if (existsSync(publicDir)) {
-    await cp(publicDir, outDir, { recursive: true });
+function shouldExcludeFile(filePath, excludePatterns) {
+  if (!excludePatterns || excludePatterns.length === 0) return false;
+  
+  const fileName = basename(filePath).toLowerCase();
+  const ext = extname(filePath).toLowerCase();
+  
+  return excludePatterns.some(pattern => {
+    const normalized = pattern.toLowerCase();
+    // Support extension patterns like '.pdf' or 'pdf'
+    if (normalized.startsWith('.')) {
+      return ext === normalized;
+    }
+    if (normalized.startsWith('*.')) {
+      return ext === normalized.slice(1);
+    }
+    // Support exact filename matches
+    if (fileName === normalized) {
+      return true;
+    }
+    // Support glob-like patterns with wildcards
+    if (normalized.includes('*')) {
+      const regex = new RegExp('^' + normalized.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+      return regex.test(fileName);
+    }
+    return false;
+  });
+}
+
+async function copyPublic(publicDir, outDir, excludePatterns = []) {
+  if (!existsSync(publicDir)) return;
+  
+  const files = await walkFiles(publicDir);
+  for (const file of files) {
+    const rel = relative(publicDir, file);
+    
+    // Skip excluded files
+    if (shouldExcludeFile(file, excludePatterns)) {
+      console.log(kolor.dim(`Skipping excluded file: ${rel}`));
+      continue;
+    }
+    
+    const destPath = join(outDir, rel);
+    await ensureDir(dirname(destPath));
+    await cp(file, destPath);
   }
+}
+
+function shouldProcessImage(filePath, config) {
+  if (!config.compressPhotos) return false;
+  const ext = extname(filePath).toLowerCase();
+  const inputFormats = config.compressionSettings?.inputFormats || [".jpg", ".jpeg", ".png"];
+  return inputFormats.includes(ext);
+}
+
+async function processImage(inputPath, outDir, settings) {
+  const ext = extname(inputPath);
+  const baseName = basename(inputPath, ext);
+  const dir = dirname(inputPath);
+  const relDir = relative(outDir, dir);
+  
+  const results = [];
+  const quality = settings.quality || 80;
+  const formats = settings.formats || [".webp"];
+  
+  for (const format of formats) {
+    try {
+      const outputName = `${baseName}${format}`;
+      const outputPath = join(dir, outputName);
+      
+      const sharpInstance = sharp(inputPath);
+      
+      if (format === ".webp") {
+        await sharpInstance.webp({ quality }).toFile(outputPath);
+      } else if (format === ".avif") {
+        await sharpInstance.avif({ quality }).toFile(outputPath);
+      } else if (format === ".jpg" || format === ".jpeg") {
+        await sharpInstance.jpeg({ quality }).toFile(outputPath);
+      } else if (format === ".png") {
+        await sharpInstance.png({ quality }).toFile(outputPath);
+      } else {
+        continue;
+      }
+      
+      const stats = await stat(outputPath);
+      results.push({
+        path: outputPath,
+        format,
+        size: stats.size
+      });
+    } catch (err) {
+      console.error(kolor.red(`Failed to convert ${basename(inputPath)} to ${format}: ${err.message}`));
+    }
+  }
+  
+  return results;
+}
+
+async function processImages(outDir, config) {
+  if (!config.compressPhotos) return;
+  
+  const settings = {
+    quality: config.compressionSettings?.quality || 80,
+    formats: config.compressionSettings?.formats || [".webp"],
+    preserveOriginal: config.compressionSettings?.preserveOriginal !== false
+  };
+  
+  console.log(kolor.cyan("🖼️  Processing images..."));
+  
+  const files = await walkFiles(outDir);
+  const imageFiles = files.filter((file) => shouldProcessImage(file, config));
+  
+  if (imageFiles.length === 0) {
+    console.log(kolor.dim("No images found to process"));
+    return;
+  }
+  
+  let totalGenerated = 0;
+  let totalOriginalSize = 0;
+  let totalConvertedSize = 0;
+  
+  await Promise.all(imageFiles.map(async (file) => {
+    const originalStats = await stat(file);
+    totalOriginalSize += originalStats.size;
+    
+    const results = await processImage(file, outDir, settings);
+    
+    if (results.length > 0) {
+      const formats = results.map(r => r.format.slice(1)).join(", ");
+      const rel = relative(outDir, file);
+      console.log(kolor.dim(`  ${rel} → ${formats}`));
+      
+      results.forEach(r => {
+        totalConvertedSize += r.size;
+        totalGenerated++;
+      });
+    }
+    
+    // Remove original if preserveOriginal is false
+    if (!settings.preserveOriginal && results.length > 0) {
+      await rm(file, { force: true });
+    }
+  }));
+  
+  const savedBytes = totalOriginalSize - totalConvertedSize;
+  const savedPercent = totalOriginalSize > 0 ? ((savedBytes / totalOriginalSize) * 100).toFixed(1) : 0;
+  
+  console.log(kolor.green(`✓ Generated ${totalGenerated} image(s)`));
+  if (!settings.preserveOriginal) {
+    console.log(kolor.green(`  Saved ${formatBytes(savedBytes)} (${savedPercent}% reduction)`));
+  }
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
 async function minifyCSSFiles(outDir) {
@@ -470,7 +633,11 @@ async function build(cwdArg = cwd) {
   const data = await loadData([dataDir, collectionsDir]);
 
   await cleanDir(outDir);
-  await copyPublic(publicDir, outDir);
+  await copyPublic(publicDir, outDir, config.excludeFiles);
+
+  if (config.compressPhotos) {
+    await processImages(outDir, config);
+  }
 
   const files = await walkFiles(pagesDir);
   if (files.length === 0) {

@@ -6,7 +6,15 @@ export default {
   markdown: true,
   minifyCSS: false,
   minifyHTML: false,
-  cacheBustAssets: false, // Set to true to add content hashes to JS/CSS filenames
+  cacheBustAssets: false,
+  excludeFiles: ['.pdf'],
+  compressPhotos: false,
+  compressionSettings: {
+    quality: 80,
+    formats: [],
+    inputFormats: [".jpg", ".jpeg", ".png"],
+    preserveOriginal: true
+  },
   integrations: {
     nunjucks: true,
     liquid: false,
