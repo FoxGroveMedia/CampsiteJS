@@ -29,6 +29,7 @@ const defaultConfig = {
   minifyCSS: false,
   minifyHTML: false,
   cacheBustAssets: false,
+  excludeFiles: [],
   integrations: { nunjucks: true, liquid: false, mustache: false, vue: false, alpine: false }
 };
 
@@ -145,9 +146,50 @@ async function cleanDir(dir) {
   await mkdir(dir, { recursive: true });
 }
 
-async function copyPublic(publicDir, outDir) {
-  if (existsSync(publicDir)) {
-    await cp(publicDir, outDir, { recursive: true });
+function shouldExcludeFile(filePath, excludePatterns) {
+  if (!excludePatterns || excludePatterns.length === 0) return false;
+  
+  const fileName = basename(filePath).toLowerCase();
+  const ext = extname(filePath).toLowerCase();
+  
+  return excludePatterns.some(pattern => {
+    const normalized = pattern.toLowerCase();
+    // Support extension patterns like '.pdf' or 'pdf'
+    if (normalized.startsWith('.')) {
+      return ext === normalized;
+    }
+    if (normalized.startsWith('*.')) {
+      return ext === normalized.slice(1);
+    }
+    // Support exact filename matches
+    if (fileName === normalized) {
+      return true;
+    }
+    // Support glob-like patterns with wildcards
+    if (normalized.includes('*')) {
+      const regex = new RegExp('^' + normalized.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+      return regex.test(fileName);
+    }
+    return false;
+  });
+}
+
+async function copyPublic(publicDir, outDir, excludePatterns = []) {
+  if (!existsSync(publicDir)) return;
+  
+  const files = await walkFiles(publicDir);
+  for (const file of files) {
+    const rel = relative(publicDir, file);
+    
+    // Skip excluded files
+    if (shouldExcludeFile(file, excludePatterns)) {
+      console.log(kolor.dim(`Skipping excluded file: ${rel}`));
+      continue;
+    }
+    
+    const destPath = join(outDir, rel);
+    await ensureDir(dirname(destPath));
+    await cp(file, destPath);
   }
 }
 
@@ -470,7 +512,7 @@ async function build(cwdArg = cwd) {
   const data = await loadData([dataDir, collectionsDir]);
 
   await cleanDir(outDir);
-  await copyPublic(publicDir, outDir);
+  await copyPublic(publicDir, outDir, config.excludeFiles);
 
   const files = await walkFiles(pagesDir);
   if (files.length === 0) {
