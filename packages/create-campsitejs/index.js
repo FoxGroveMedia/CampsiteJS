@@ -109,6 +109,11 @@ async function copyBaseTemplate(targetDir) {
 async function writeConfig(targetDir, answers) {
   const configPath = join(targetDir, "campsite.config.js");
   const primaryEngine = answers.templateEngines[0] || "nunjucks";
+  const photoFormats = answers.photoCompression.length > 0 
+    ? JSON.stringify(answers.photoCompression)
+    : "[]";
+  const compressPhotos = answers.photoCompression.length > 0;
+  
   const config = `export default {
   siteName: "${answers.projectName}",
   srcDir: "src",
@@ -118,6 +123,13 @@ async function writeConfig(targetDir, answers) {
   minifyCSS: ${answers.minifyAssets},
   minifyHTML: ${answers.minifyAssets},
   cacheBustAssets: ${answers.cacheBustAssets}, // Add content hashes to JS/CSS filenames
+  compressPhotos: ${compressPhotos},
+  compressionSettings: {
+    quality: 80,
+    formats: ${photoFormats},
+    inputFormats: [".jpg", ".jpeg", ".png"],
+    preserveOriginal: true
+  },
   integrations: {
     nunjucks: ${answers.templateEngines.includes("nunjucks")},
     liquid: ${answers.templateEngines.includes("liquid")},
@@ -403,6 +415,18 @@ async function main() {
       initial: true,
       active: "yes",
       inactive: "no"
+    },
+    {
+      type: "multiselect",
+      name: "photoCompression",
+      message: "Photo compression formats",
+      hint: "Use space to toggle, enter to confirm",
+      instructions: false,
+      min: 0,
+      choices: [
+        { title: "WebP", value: ".webp", selected: true },
+        { title: "AVIF", value: ".avif", selected: true }
+      ]
     },
     {
       type: "select",
