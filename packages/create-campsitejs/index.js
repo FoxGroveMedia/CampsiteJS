@@ -179,10 +179,10 @@ async function updatePackageJson(targetDir, answers) {
   });
 
   if (cssFramework === "tailwind") {
-    devDeps["tailwindcss"] = "^3.4.13";
+    devDeps["tailwindcss"] = "^4.1.18";
     devDeps["npm-run-all"] = "^4.1.5";
-    pkg.scripts["build:css"] = "tailwindcss -c tailwind.config.cjs -i ./src/styles/tailwind.css -o ./public/style.css --minify";
-    pkg.scripts["dev:css"] = "tailwindcss -c tailwind.config.cjs -i ./src/styles/tailwind.css -o ./public/style.css --watch";
+    pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify";
+    pkg.scripts["dev:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --watch";
     pkg.scripts["dev:site"] = "campsite dev";
     pkg.scripts["dev"] = "npm-run-all -p dev:css dev:site";
     pkg.scripts["prebuild"] = "npm run build:css";
@@ -308,7 +308,6 @@ async function pruneComponents(targetDir, answers) {
 async function pruneCssFramework(targetDir, answers) {
   if (answers.cssFramework === "tailwind") return;
   const tailwindFiles = [
-    join(targetDir, "tailwind.config.cjs"),
     join(targetDir, "src", "styles", "tailwind.css")
   ];
   await Promise.all(tailwindFiles.map((file) => rm(file).catch(() => {})));
