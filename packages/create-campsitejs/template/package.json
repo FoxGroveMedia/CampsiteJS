@@ -10,8 +10,7 @@
     "dev": "npm-run-all -p dev:css dev:site",
     "prebuild": "npm run build:css",
     "build": "camper build",
-    "serve": "camper serve",
-    "postinstall": "npm run build:css"
+    "serve": "camper serve"
   },
   "dependencies": {
     "basecampjs": "^0.0.11"

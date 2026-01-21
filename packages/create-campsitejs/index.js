@@ -122,7 +122,7 @@ async function writeConfig(targetDir, answers) {
   markdown: ${answers.markdown},
   minifyCSS: ${answers.minifyAssets},
   minifyHTML: ${answers.minifyAssets},
-  cacheBustAssets: ${answers.cacheBustAssets}, // Add content hashes to JS/CSS filenames
+  cacheBustAssets: ${answers.cacheBustAssets},
   compressPhotos: ${compressPhotos},
   compressionSettings: {
     quality: 80,
@@ -179,6 +179,7 @@ async function updatePackageJson(targetDir, answers) {
   });
 
   if (cssFramework === "tailwind") {
+    devDeps["@tailwindcss/cli"] = "^4.1.18";
     devDeps["tailwindcss"] = "^4.1.18";
     devDeps["npm-run-all"] = "^4.1.5";
     pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify";
@@ -190,6 +191,7 @@ async function updatePackageJson(targetDir, answers) {
     pkg.scripts["serve"] = "camper serve";
     pkg.scripts["postinstall"] = "npm run build:css";
   } else {
+    delete devDeps["@tailwindcss/cli"];
     delete devDeps["tailwindcss"];
     delete devDeps["npm-run-all"];
     Object.entries(cssDeps).forEach(([key, [name]]) => {
@@ -473,7 +475,19 @@ async function main() {
   }
 
   console.log(kleur.bold().green("Setup Complete...") + " " + kleur.bold().cyan("Happy Camping! 🌲⛺🔥"));
-  console.log(`\n🧭 Navigate to ${kleur.bold(answers.projectName)} and run: ${kleur.cyan(`${answers.packageManager} run dev`)}`);
+  console.log(`\n🧭 Navigate to ${kleur.bold(answers.projectName)} and run:`);
+  
+  // If they didn't install deps, tell them to install first
+  if (!answers.install) {
+    console.log(`   ${kleur.cyan(`${answers.packageManager} install`)}`);
+  }
+  
+  // If using Tailwind CSS, remind them to build CSS first
+  if (answers.cssFramework === "tailwind") {
+    console.log(`   ${kleur.cyan(`${answers.packageManager} run build:css`)} ${kleur.dim("(build Tailwind styles)")}`);
+  }
+  
+  console.log(`   ${kleur.cyan(`${answers.packageManager} run dev`)}`);
   console.log("\n");
 }
 

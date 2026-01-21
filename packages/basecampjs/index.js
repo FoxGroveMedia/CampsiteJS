@@ -388,6 +388,26 @@ function createLiquidEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
   });
 }
 
+async function loadMustachePartials(partialsDir) {
+  const partials = {};
+  if (!existsSync(partialsDir)) return partials;
+  
+  try {
+    const files = await walkFiles(partialsDir);
+    await Promise.all(files.map(async (file) => {
+      if (extname(file).toLowerCase() === ".mustache") {
+        const content = await readFile(file, "utf8");
+        const partialName = basename(file, ".mustache");
+        partials[partialName] = content;
+      }
+    }));
+  } catch (err) {
+    console.error(kolor.yellow(`Warning: Failed to load Mustache partials: ${err.message}`));
+  }
+  
+  return partials;
+}
+
 function toUrlPath(outRel) {
   const normalized = outRel.replace(/\\/g, "/");
   let path = `/${normalized}`;
@@ -416,7 +436,7 @@ function shouldRenderMarkdown(frontmatter, config, defaultValue) {
   return defaultValue;
 }
 
-async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDir) {
+async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDir, partials = {}) {
   if (!layoutName) return html;
   const ext = extname(layoutName).toLowerCase();
   const layoutCtx = {
@@ -438,7 +458,7 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDi
     const layoutPath = join(layoutsDir, layoutName);
     if (existsSync(layoutPath)) {
       const layoutTemplate = await readFile(layoutPath, "utf8");
-      return Mustache.render(layoutTemplate, layoutCtx);
+      return Mustache.render(layoutTemplate, layoutCtx, partials);
     }
   }
 
@@ -446,20 +466,25 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDi
   return html;
 }
 
-async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data }) {
+async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data, partialsDir }) {
   const rel = relative(pagesDir, filePath);
   const ext = extname(filePath).toLowerCase();
   const outRel = rel.replace(/\.liquid(\.html)?$/i, ".html").replace(ext, ".html");
   const outPath = join(outDir, outRel);
   const path = toUrlPath(outRel);
   await ensureDir(dirname(outPath));
+  
+  // Load Mustache partials if needed
+  const partials = (ext === ".mustache" || (await readFile(filePath, "utf8")).match(/layout:.*\.mustache/)) 
+    ? await loadMustachePartials(partialsDir) 
+    : {};
 
   if (ext === ".md") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
     const html = md.render(parsed.content);
     const ctx = pageContext(parsed.data, html, config, rel, data, path);
-    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -473,7 +498,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -486,7 +511,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -495,11 +520,11 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
     const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
-    let pageHtml = Mustache.render(parsed.content, ctx);
+    let pageHtml = Mustache.render(parsed.content, ctx, partials);
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -512,7 +537,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -645,7 +670,7 @@ async function build(cwdArg = cwd) {
     return;
   }
 
-  await Promise.all(files.map((file) => renderPage(file, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data })));
+  await Promise.all(files.map((file) => renderPage(file, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data, partialsDir })));
 
   if (config.minifyCSS) {
     await minifyCSSFiles(outDir);
@@ -1466,6 +1491,7 @@ async function main() {
       await preview();
       break;
     case "clean":
+    case "cleanup":
       await clean();
       break;
     case "check":
