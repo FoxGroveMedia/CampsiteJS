@@ -627,7 +627,7 @@ async function cacheBustAssets(outDir) {
   return assetMap;
 }
 
-async function build(cwdArg = cwd) {
+async function build(cwdArg = cwd, options = {}) {
   const config = await loadConfig(cwdArg);
   const srcDir = resolve(cwdArg, config.srcDir || "src");
   const pagesDir = join(srcDir, "pages");
@@ -660,7 +660,9 @@ async function build(cwdArg = cwd) {
   await cleanDir(outDir);
   await copyPublic(publicDir, outDir, config.excludeFiles);
 
-  if (config.compressPhotos) {
+  // Only compress photos during production builds, not during dev mode
+  const shouldCompressPhotos = options.skipImageCompression !== true && config.compressPhotos;
+  if (shouldCompressPhotos) {
     await processImages(outDir, config);
   }
 
@@ -765,7 +767,8 @@ async function dev(cwdArg = cwd) {
     }
     building = true;
     try {
-      await build(cwdArg);
+      // Skip image compression during dev mode for faster rebuilds
+      await build(cwdArg, { skipImageCompression: true });
     } catch (err) {
       console.error(kolor.red(`Build failed: ${err.message}`));
     } finally {

@@ -1,4 +1,8 @@
-## CampsiteJS: [![npm CampsiteJS](https://img.shields.io/npm/v/create-campsitejs.svg)](https://www.npmjs.com/package/create-campsitejs) [![Download](https://img.shields.io/npm/dm/create-campsitejs)](https://www.npmjs.com/package/create-campsitejs) | BasecampJS: [![npm BasecampJS](https://img.shields.io/npm/v/basecampjs.svg)](https://www.npmjs.com/package/basecampjs) [![Download](https://img.shields.io/npm/dm/basecampjs)](https://www.npmjs.com/package/basecampjs)
+![NPM Version](https://img.shields.io/npm/v/create-campsitejs?color=3eb812)
+![repo size](https://img.shields.io/github/repo-size/FoxGroveMedia/CampsiteJS.svg?color=3eb812)
+![License MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg?color=3eb812)
+![Monthly Downloads](https://img.shields.io/npm/dm/create-campsitejs?color=3eb812)
+![docs](https://img.shields.io/website?url=https%3A%2F%2Fcampsitejs.dev&up_message=online&label=docs&color=3eb812)
 
 # ⛺ CampsiteJS - A Cozy Static Site Generator
 Welcome to CampsiteJS, the static site generator that feels like a weekend in the woods. Pack light, pitch fast, and ship sites with a cozy developer experience.
@@ -36,6 +40,18 @@ npm run dev
 ```
 - Swap `_gitignore` to `.gitignore` is handled automatically by the scaffolder
 
+## 🌎 Global CLI Install
+Install once and use the `camper` commands anywhere:
+```
+npm install -g campsitejs
+camper dev    # watch, rebuild, and serve
+camper build  # production build
+camper serve  # serve existing dist
+```
+- `campsite` is kept as an alias to `camper`
+- Prefer `npx camper ...` if you do not want a global install
+- Full docs: https://campsitejs.dev/docs
+
 ## 🛠️ Working in This Repo
 ```
 npm install
@@ -49,9 +65,25 @@ npm run dev
 - Image optimization coming soon!
 
 ## 🚦 CampsiteJS Commands
+- `npx camper init` — scaffold config, folders, and starter files in cwd
 - `npx camper dev` — watch `src/` and `public/`, rebuild, and serve `campsite/`
 - `npx camper build` — clean build to `campsite/`
+- `npx camper preview` — build then serve the production output
 - `npx camper serve` — serve an existing `campsite/`
+- `npx camper list` — list pages, layouts, components, collections
+- `npx camper clean` — remove the build output directory
+- `npx camper check` — validate config and project structure
+- `npx camper upgrade` — update CampsiteJS/basecampjs dependencies
+- `npx camper make:page <name>` — add a page in `src/pages/`
+- `npx camper make:post <name>` — add a blog post in `src/pages/blog/`
+- `npx camper make:layout <name>` — add a layout in `src/layouts/`
+- `npx camper make:component <name>` — add a component in `src/components/`
+- `npx camper make:partial <name>` — add a partial in `src/partials/`
+- `npx camper make:collection <name>` — add a JSON collection in `src/collections/`
+
+Tip: the `make:` generators accept a comma-separated list to create several items at once (e.g., `npx camper make:page about,team,contact`).
+
+Read more guides and examples: https://campsitejs.dev/docs
 
 ## 🗂️ Project Layout
 - packages/create-campsitejs — CLI that copies the starter template and installs deps
