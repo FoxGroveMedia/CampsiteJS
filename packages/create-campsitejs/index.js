@@ -29,7 +29,7 @@ function showHelp(version) {
   
   console.log(kleur.bold("Usage:"));
   console.log("  npm create campsitejs@latest [project-name]");
-  console.log("  npx campsitejs [project-name]\n");
+  console.log("  npx create-campsitejs@latest [project-name]\n");
   
   console.log(kleur.bold("Options:"));
   console.log("  -h, --help     Show this help message");
@@ -43,10 +43,10 @@ function showHelp(version) {
   
   console.log(kleur.bold("After Setup:"));
   console.log("  cd your-project-name");
-  console.log("  campsite dev          " + kleur.dim("# Start development server"));
-  console.log("  campsite build        " + kleur.dim("# Build for production"));
-  console.log("  campsite make:page    " + kleur.dim("# Create new content"));
-  console.log("  campsite --help       " + kleur.dim("# See all available commands\n"));
+  console.log("  camper dev          " + kleur.dim("# Start development server"));
+  console.log("  camper build        " + kleur.dim("# Build for production"));
+  console.log("  camper make:page    " + kleur.dim("# Create new content"));
+  console.log("  camper --help       " + kleur.dim("# See all available commands\n"));
   
   console.log(kleur.dim("For more information, visit: https://campsitejs.dev"));
   console.log();
@@ -122,7 +122,7 @@ async function writeConfig(targetDir, answers) {
   markdown: ${answers.markdown},
   minifyCSS: ${answers.minifyAssets},
   minifyHTML: ${answers.minifyAssets},
-  cacheBustAssets: ${answers.cacheBustAssets}, // Add content hashes to JS/CSS filenames
+  cacheBustAssets: ${answers.cacheBustAssets},
   compressPhotos: ${compressPhotos},
   compressionSettings: {
     quality: 80,
@@ -179,17 +179,19 @@ async function updatePackageJson(targetDir, answers) {
   });
 
   if (cssFramework === "tailwind") {
+    devDeps["@tailwindcss/cli"] = "^4.1.18";
     devDeps["tailwindcss"] = "^4.1.18";
     devDeps["npm-run-all"] = "^4.1.5";
     pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify";
     pkg.scripts["dev:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --watch";
-    pkg.scripts["dev:site"] = "campsite dev";
+    pkg.scripts["dev:site"] = "camper dev";
     pkg.scripts["dev"] = "npm-run-all -p dev:css dev:site";
     pkg.scripts["prebuild"] = "npm run build:css";
-    pkg.scripts["build"] = "campsite build";
-    pkg.scripts["serve"] = "campsite serve";
+    pkg.scripts["build"] = "camper build";
+    pkg.scripts["serve"] = "camper serve";
     pkg.scripts["postinstall"] = "npm run build:css";
   } else {
+    delete devDeps["@tailwindcss/cli"];
     delete devDeps["tailwindcss"];
     delete devDeps["npm-run-all"];
     Object.entries(cssDeps).forEach(([key, [name]]) => {
@@ -200,9 +202,9 @@ async function updatePackageJson(targetDir, answers) {
       const [name, version] = selected;
       deps[name] = version;
     }
-    pkg.scripts["dev"] = "campsite dev";
-    pkg.scripts["build"] = "campsite build";
-    pkg.scripts["serve"] = "campsite serve";
+    pkg.scripts["dev"] = "camper dev";
+    pkg.scripts["build"] = "camper build";
+    pkg.scripts["serve"] = "camper serve";
   }
 
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
@@ -473,7 +475,19 @@ async function main() {
   }
 
   console.log(kleur.bold().green("Setup Complete...") + " " + kleur.bold().cyan("Happy Camping! 🌲⛺🔥"));
-  console.log(`\n🧭 Navigate to ${kleur.bold(answers.projectName)} and run: ${kleur.cyan(`${answers.packageManager} run dev`)}`);
+  console.log(`\n🧭 Navigate to ${kleur.bold(answers.projectName)} and run:`);
+  
+  // If they didn't install deps, tell them to install first
+  if (!answers.install) {
+    console.log(`   ${kleur.cyan(`${answers.packageManager} install`)}`);
+  }
+  
+  // If using Tailwind CSS, remind them to build CSS first
+  if (answers.cssFramework === "tailwind") {
+    console.log(`   ${kleur.cyan(`${answers.packageManager} run build:css`)} ${kleur.dim("(build Tailwind styles)")}`);
+  }
+  
+  console.log(`   ${kleur.cyan(`${answers.packageManager} run dev`)}`);
   console.log("\n");
 }
 

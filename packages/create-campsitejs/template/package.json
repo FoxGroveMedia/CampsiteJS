@@ -6,15 +6,14 @@
   "scripts": {
     "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify",
     "dev:css": "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --watch",
-    "dev:site": "campsite dev",
+    "dev:site": "camper dev",
     "dev": "npm-run-all -p dev:css dev:site",
     "prebuild": "npm run build:css",
-    "build": "campsite build",
-    "serve": "campsite serve",
-    "postinstall": "npm run build:css"
+    "build": "camper build",
+    "serve": "camper serve"
   },
   "dependencies": {
-    "basecampjs": "^0.0.10"
+    "basecampjs": "^0.0.12"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

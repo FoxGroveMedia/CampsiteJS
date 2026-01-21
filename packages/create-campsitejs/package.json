@@ -1,6 +1,6 @@
 {
   "name": "create-campsitejs",
-  "version": "0.0.7",
+  "version": "0.0.10",
   "type": "module",
   "description": "Create a new Campsite static site (create-campsitejs alias).",
   "bin": {

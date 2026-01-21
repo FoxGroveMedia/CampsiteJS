@@ -70,7 +70,7 @@ function showHelp() {
   console.log(kolor.dim("Build and manage your static campsite.\n"));
   
   console.log(kolor.bold("Usage:"));
-  console.log("  campsite <command> [arguments] [options]\n");
+  console.log("  camper <command> [arguments] [options]\n");
   
   console.log(kolor.bold("Project Commands:"));
   console.log("  " + kolor.cyan("init") + "              Initialize a new Campsite project in current directory");
@@ -110,15 +110,15 @@ function showHelp() {
   
   console.log(kolor.bold("Examples:"));
   console.log("  " + kolor.dim("# Initialize a new project"));
-  console.log("  campsite init\n");
+  console.log("  camper init\n");
   console.log("  " + kolor.dim("# Start development"));
-  console.log("  campsite dev\n");
+  console.log("  camper dev\n");
   console.log("  " + kolor.dim("# Create new content"));
-  console.log("  campsite make:page about");
-  console.log("  campsite make:post \"My First Post\"");
-  console.log("  campsite make:collection products\n");
+  console.log("  camper make:page about");
+  console.log("  camper make:post \"My First Post\"");
+  console.log("  camper make:collection products\n");
   console.log("  " + kolor.dim("# Build and preview"));
-  console.log("  campsite preview\n");
+  console.log("  camper preview\n");
   console.log(kolor.dim("For more information, visit: https://campsitejs.dev"));
   console.log();
 }
@@ -388,6 +388,26 @@ function createLiquidEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
   });
 }
 
+async function loadMustachePartials(partialsDir) {
+  const partials = {};
+  if (!existsSync(partialsDir)) return partials;
+  
+  try {
+    const files = await walkFiles(partialsDir);
+    await Promise.all(files.map(async (file) => {
+      if (extname(file).toLowerCase() === ".mustache") {
+        const content = await readFile(file, "utf8");
+        const partialName = basename(file, ".mustache");
+        partials[partialName] = content;
+      }
+    }));
+  } catch (err) {
+    console.error(kolor.yellow(`Warning: Failed to load Mustache partials: ${err.message}`));
+  }
+  
+  return partials;
+}
+
 function toUrlPath(outRel) {
   const normalized = outRel.replace(/\\/g, "/");
   let path = `/${normalized}`;
@@ -416,7 +436,7 @@ function shouldRenderMarkdown(frontmatter, config, defaultValue) {
   return defaultValue;
 }
 
-async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDir) {
+async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDir, partials = {}) {
   if (!layoutName) return html;
   const ext = extname(layoutName).toLowerCase();
   const layoutCtx = {
@@ -438,7 +458,7 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDi
     const layoutPath = join(layoutsDir, layoutName);
     if (existsSync(layoutPath)) {
       const layoutTemplate = await readFile(layoutPath, "utf8");
-      return Mustache.render(layoutTemplate, layoutCtx);
+      return Mustache.render(layoutTemplate, layoutCtx, partials);
     }
   }
 
@@ -446,20 +466,25 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDi
   return html;
 }
 
-async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data }) {
+async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data, partialsDir }) {
   const rel = relative(pagesDir, filePath);
   const ext = extname(filePath).toLowerCase();
   const outRel = rel.replace(/\.liquid(\.html)?$/i, ".html").replace(ext, ".html");
   const outPath = join(outDir, outRel);
   const path = toUrlPath(outRel);
   await ensureDir(dirname(outPath));
+  
+  // Load Mustache partials if needed
+  const partials = (ext === ".mustache" || (await readFile(filePath, "utf8")).match(/layout:.*\.mustache/)) 
+    ? await loadMustachePartials(partialsDir) 
+    : {};
 
   if (ext === ".md") {
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
     const html = md.render(parsed.content);
     const ctx = pageContext(parsed.data, html, config, rel, data, path);
-    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -473,7 +498,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -486,7 +511,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -495,11 +520,11 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     const raw = await readFile(filePath, "utf8");
     const parsed = matter(raw);
     const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
-    let pageHtml = Mustache.render(parsed.content, ctx);
+    let pageHtml = Mustache.render(parsed.content, ctx, partials);
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -512,7 +537,7 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir);
+    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
     return;
   }
@@ -645,7 +670,7 @@ async function build(cwdArg = cwd) {
     return;
   }
 
-  await Promise.all(files.map((file) => renderPage(file, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data })));
+  await Promise.all(files.map((file) => renderPage(file, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data, partialsDir })));
 
   if (config.minifyCSS) {
     await minifyCSSFiles(outDir);
@@ -789,17 +814,17 @@ async function makeContent(type) {
   
   if (args.length === 0) {
     console.log(kolor.red("❌ Missing name argument"));
-    console.log(kolor.dim(`Usage: campsite make:${type} <name> [name2, name3, ...]`));
+    console.log(kolor.dim(`Usage: camper make:${type} <name> [name2, name3, ...]`));
     console.log(kolor.dim("\nExamples:"));
-    console.log(kolor.dim("  campsite make:page about"));
-    console.log(kolor.dim("  campsite make:page home, about, contact"));
-    console.log(kolor.dim("  campsite make:collection products, categories\n"));
+    console.log(kolor.dim("  camper make:page about"));
+    console.log(kolor.dim("  camper make:page home, about, contact"));
+    console.log(kolor.dim("  camper make:collection products, categories\n"));
     exit(1);
   }
 
   // Join all args and split by comma to support both formats:
-  // campsite make:page home about contact
-  // campsite make:page home, about, contact
+  // camper make:page home about contact
+  // camper make:page home, about, contact
   const namesString = args.join(" ");
   const names = namesString.split(",").map(n => n.trim()).filter(n => n.length > 0);
 
@@ -1024,7 +1049,7 @@ async function init() {
   // Check if already initialized
   if (existsSync(join(targetDir, "campsite.config.js"))) {
     console.log(kolor.yellow("⚠️  This directory already has a campsite.config.js file."));
-    console.log(kolor.dim("Run 'campsite dev' to start developing.\n"));
+    console.log(kolor.dim("Run 'camper dev' to start developing.\n"));
     return;
   }
 
@@ -1087,7 +1112,7 @@ Your cozy static site is ready to build.
 
 ## Get Started
 
-- Run \`campsite dev\` to start developing
+- Run \`camper dev\` to start developing
 - Edit pages in \`src/pages/\`
 - Customize layouts in \`src/layouts/\`
 
@@ -1128,10 +1153,10 @@ dist/
     version: "0.0.1",
     type: "module",
     scripts: {
-      dev: "campsite dev",
-      build: "campsite build",
-      serve: "campsite serve",
-      preview: "campsite preview"
+      dev: "camper dev",
+      build: "camper build",
+      serve: "camper serve",
+      preview: "camper preview"
     },
     dependencies: {
       basecampjs: "^0.0.8"
@@ -1142,7 +1167,7 @@ dist/
   console.log(kolor.green("✅ Campsite initialized successfully!\n"));
   console.log(kolor.bold("Next steps:"));
   console.log(kolor.dim("  1. Install dependencies: npm install"));
-  console.log(kolor.dim("  2. Start developing: campsite dev\n"));
+  console.log(kolor.dim("  2. Start developing: camper dev\n"));
 }
 
 async function clean() {
@@ -1167,7 +1192,7 @@ async function check() {
   const configPath = join(cwd, "campsite.config.js");
   if (!existsSync(configPath)) {
     console.log(kolor.red("❌ campsite.config.js not found"));
-    console.log(kolor.dim("   Run 'campsite init' to initialize a project\n"));
+    console.log(kolor.dim("   Run 'camper init' to initialize a project\n"));
     hasIssues = true;
   } else {
     console.log(kolor.green("✅ campsite.config.js found"));
@@ -1300,7 +1325,7 @@ async function upgrade() {
         } catch {}
         
         console.log();
-        console.log(kolor.dim("🌲 Tip: Run 'campsite dev' to start developing with the latest version\n"));
+        console.log(kolor.dim("🌲 Tip: Run 'camper dev' to start developing with the latest version\n"));
         resolve();
       } else {
         console.log();
@@ -1403,7 +1428,7 @@ async function list() {
     }
   }
 
-  console.log(kolor.dim("🌲 Tip: Use 'campsite make:<type> <name>' to create new content\n"));
+  console.log(kolor.dim("🌲 Tip: Use 'camper make:<type> <name>' to create new content\n"));
 }
 
 async function preview() {
@@ -1436,7 +1461,7 @@ async function main() {
     const type = command.substring(5); // Remove 'make:' prefix
     if (!type) {
       console.log(kolor.red("❌ No type specified"));
-      console.log(kolor.dim("Run 'campsite --help' for available make commands.\n"));
+      console.log(kolor.dim("Run 'camper --help' for available make commands.\n"));
       exit(1);
     }
     await makeContent(type);
@@ -1466,6 +1491,7 @@ async function main() {
       await preview();
       break;
     case "clean":
+    case "cleanup":
       await clean();
       break;
     case "check":
@@ -1479,7 +1505,7 @@ async function main() {
       break;
     default:
       console.log(kolor.yellow(`Unknown command: ${command}`));
-      console.log(kolor.dim("Run 'campsite --help' for usage information."));
+      console.log(kolor.dim("Run 'camper --help' for usage information."));
       exit(1);
   }
 }

@@ -7,7 +7,7 @@ Welcome to CampsiteJS, the static site generator that feels like a weekend in th
 
 ## 🗺️ Trail Map
 - packages/basecampjs — the build/dev/serve engine
-- packages/campsitejs — scaffolder invoked via `npm create campsitejs@latest` (or `npx campsitejs@latest`)
+- packages/create-campsitejs — scaffolder invoked via `npm create campsitejs@latest` (or `npx create-campsitejs@latest`)
 
 ## 🏕️ Why Camp With Us?
 - Quick setup: new sites in a few prompts
@@ -49,13 +49,13 @@ npm run dev
 - Image optimization coming soon!
 
 ## 🚦 CampsiteJS Commands
-- `npx campsite dev` — watch `src/` and `public/`, rebuild, and serve `campsite/`
-- `npx campsite build` — clean build to `campsite/`
-- `npx campsite serve` — serve an existing `campsite/`
+- `npx camper dev` — watch `src/` and `public/`, rebuild, and serve `campsite/`
+- `npx camper build` — clean build to `campsite/`
+- `npx camper serve` — serve an existing `campsite/`
 
 ## 🗂️ Project Layout
-- packages/campsitejs — CLI that copies the starter template and installs deps
-- packages/basecampjs — exposes `campsite dev|build|serve`
+- packages/create-campsitejs — CLI that copies the starter template and installs deps
+- packages/basecampjs — exposes `camper dev|build|serve` (with `campsite` kept as an alias)
 - campsite-site — sample consumer with `src/pages`, `src/layouts`, `public`
 
 ## 🔥 Core Concepts

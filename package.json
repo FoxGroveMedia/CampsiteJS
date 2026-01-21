@@ -1,13 +1,12 @@
 {
-  "name": "campsite",
+  "name": "campsitejs",
   "private": true,
   "type": "module",
-  "version": "0.0.6",
+  "version": "0.0.10",
   "description": "Monorepo for Campsite static site generator and campsitejs CLI.",
   "license": "MIT",
   "packageManager": "npm@10.9.0",
   "workspaces": [
-    "packages/campsitejs",
     "packages/create-campsitejs",
     "packages/basecampjs"
   ]
