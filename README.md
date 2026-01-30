@@ -7,6 +7,10 @@
 # ⛺ CampsiteJS - A Cozy Static Site Generator
 Welcome to CampsiteJS, the static site generator that feels like a weekend in the woods. Pack light, pitch fast, and ship sites with a cozy developer experience.
 
+> **Please Note:** CampsiteJS is in active development. While it's stable for many use cases, some features are still being refined. Your feedback and contributions are warmly welcomed, as I stumble through the forest with my headlights on!
+>
+> ~**Chris**
+
 ![CampsiteJS screenshot](https://cdn.foxgrove.media/csjs/screenshot.jpg)
 
 ## 🗺️ Trail Map
