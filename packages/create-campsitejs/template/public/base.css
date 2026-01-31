@@ -1,0 +1,74 @@
+html {
+  height: 100%;
+  --hdr-gradient: radial-gradient(
+    farthest-corner circle at top in oklab,
+    #331500 0%, #000 100%
+  );
+  --sdr-gradient: radial-gradient(farthest-corner circle at top, #331500 0%, #000 100%);
+  background: var(--hdr-gradient);
+}
+
+body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  color: #fff;
+}
+body a {
+  color: #FFB511;
+}
+body a:hover {
+  color: #fff;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+header > a > img {
+  height: 30px;
+  width: auto;
+}
+header nav {
+  display: flex;
+  align-items: center;
+  gap: 0 10px;
+}
+header nav a {
+  padding: 4px 10px;
+  text-decoration: none;
+}
+header nav a.active {
+  font-weight: 600;
+  text-decoration: underline;
+}
+header nav a.active, header nav a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+h1 {
+  font-family: "Nunito", sans-serif;
+}
+
+main {
+  padding: 48px 0;
+}
+main code {
+  background-color: #000;
+  padding: 2px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 18px;
+  border-radius: 4px;
+  color: limegreen;
+  display: inline-block;
+}
+
+footer {
+  color: #83817F;
+  font-size: 14px;
+}

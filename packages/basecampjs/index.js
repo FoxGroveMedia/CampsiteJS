@@ -23,10 +23,11 @@ const md = new MarkdownIt({ html: true, linkify: true, typographer: true });
 
 const defaultConfig = {
   siteName: "Campsite",
+  siteUrl: "https://example.com",
   srcDir: "src",
   outDir: "dist",
   templateEngine: "nunjucks",
-  markdown: true,
+  frontmatter: true,
   minifyCSS: false,
   minifyHTML: false,
   cacheBustAssets: false,
@@ -38,6 +39,7 @@ const defaultConfig = {
     inputFormats: [".jpg", ".jpeg", ".png"],
     preserveOriginal: true
   },
+  port: 4173,
   integrations: { nunjucks: true, liquid: false, mustache: false, vue: false, alpine: false }
 };
 
@@ -674,17 +676,20 @@ async function build(cwdArg = cwd, options = {}) {
 
   await Promise.all(files.map((file) => renderPage(file, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data, partialsDir })));
 
-  if (config.minifyCSS) {
+  // Skip minification and cache busting in dev mode for faster rebuilds
+  const isDevMode = options.devMode === true;
+
+  if (!isDevMode && config.minifyCSS) {
     await minifyCSSFiles(outDir);
     console.log(kolor.green("CSS minified"));
   }
 
-  if (config.minifyHTML) {
+  if (!isDevMode && config.minifyHTML) {
     await minifyHTMLFiles(outDir, config);
     console.log(kolor.green("HTML minified"));
   }
 
-  if (config.cacheBustAssets) {
+  if (!isDevMode && config.cacheBustAssets) {
     console.log(kolor.cyan("Cache-busting assets..."));
     const assetMap = await cacheBustAssets(outDir);
     const assetCount = Object.keys(assetMap).length;
@@ -693,6 +698,14 @@ async function build(cwdArg = cwd, options = {}) {
     } else {
       console.log(kolor.yellow("No assets found to cache-bust"));
     }
+  }
+
+  // Generate robots.txt dynamically if it doesn't exist in public directory
+  const publicRobotsTxt = join(publicDir, "robots.txt");
+  const distRobotsTxt = join(outDir, "robots.txt");
+  if (!existsSync(publicRobotsTxt) && !existsSync(distRobotsTxt)) {
+    const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${config.siteUrl}/sitemap.xml\n`;
+    await writeFile(distRobotsTxt, robotsTxt, "utf8");
   }
 
   console.log(kolor.green(`Built ${files.length} page(s) → ${relative(cwdArg, outDir)}`));
@@ -767,8 +780,8 @@ async function dev(cwdArg = cwd) {
     }
     building = true;
     try {
-      // Skip image compression during dev mode for faster rebuilds
-      await build(cwdArg, { skipImageCompression: true });
+      // Skip image compression, minification, and cache busting during dev mode for faster rebuilds
+      await build(cwdArg, { skipImageCompression: true, devMode: true });
     } catch (err) {
       console.error(kolor.red(`Build failed: ${err.message}`));
     } finally {
@@ -795,7 +808,7 @@ async function dev(cwdArg = cwd) {
     runBuild();
   });
 
-  serve(outDir);
+  serve(outDir, config.port || 4173);
 }
 
 function slugify(text) {
@@ -1441,7 +1454,7 @@ async function preview() {
   const config = await loadConfig(cwd);
   const outDir = resolve(cwd, config.outDir || "dist");
   console.log(kolor.cyan(kolor.bold("🔥 Starting preview server...\n")));
-  serve(outDir);
+  serve(outDir, config.port || 4173);
 }
 
 async function main() {
@@ -1487,7 +1500,7 @@ async function main() {
       if (!existsSync(outDir)) {
         await build();
       }
-      serve(outDir);
+      serve(outDir, config.port || 4173);
       break;
     }
     case "preview":
