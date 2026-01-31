@@ -9,8 +9,6 @@ import kleur from "kleur";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const templateDir = join(__dirname, "template");
-// Variant pages live under the template folder
-const variantDir = join(templateDir, "variants");
 const pkgJsonPath = join(__dirname, "package.json");
 
 async function getCliVersion() {
@@ -108,18 +106,19 @@ async function copyBaseTemplate(targetDir) {
 
 async function writeConfig(targetDir, answers) {
   const configPath = join(targetDir, "campsite.config.js");
-  const primaryEngine = answers.templateEngines[0] || "nunjucks";
   const photoFormats = answers.photoCompression.length > 0 
     ? JSON.stringify(answers.photoCompression)
     : "[]";
   const compressPhotos = answers.photoCompression.length > 0;
   
   const config = `export default {
+  port: 4173,
   siteName: "${answers.projectName}",
+  siteUrl: "https://example.com",
   srcDir: "src",
   outDir: "dist",
-  templateEngine: "${primaryEngine}",
-  markdown: ${answers.markdown},
+  templateEngine: "nunjucks",
+  frontmatter: ${answers.frontmatter},
   minifyCSS: ${answers.minifyAssets},
   minifyHTML: ${answers.minifyAssets},
   cacheBustAssets: ${answers.cacheBustAssets},
@@ -158,7 +157,7 @@ async function updatePackageJson(targetDir, answers) {
   } else {
     devDeps["basecampjs"] = "^0.0.1";
   }
-  if (answers.markdown) devDeps["markdown-it"] = "^14.1.0";
+  if (answers.templateEngines.includes("markdown")) devDeps["markdown-it"] = "^14.1.0";
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
   if (answers.templateEngines.includes("mustache")) devDeps["mustache"] = "^4.2.0";
@@ -166,7 +165,7 @@ async function updatePackageJson(targetDir, answers) {
   if (answers.jsFrameworks.includes("alpine")) deps["alpinejs"] = "^3.13.0";
 
   // CSS framework selection
-  const cssFramework = answers.cssFramework || "tailwind";
+  const cssFramework = answers.cssFramework || "none";
   const cssDeps = {
     bootstrap: ["bootstrap", "^5.3.3"],
     foundation: ["foundation-sites", "^6.8.1"],
@@ -179,8 +178,8 @@ async function updatePackageJson(targetDir, answers) {
   });
 
   if (cssFramework === "tailwind") {
-    devDeps["@tailwindcss/cli"] = "^4.1.18";
     devDeps["tailwindcss"] = "^4.1.18";
+    devDeps["@tailwindcss/cli"] = "^4.1.18";
     devDeps["npm-run-all"] = "^4.1.5";
     pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify";
     pkg.scripts["dev:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --watch";
@@ -189,11 +188,14 @@ async function updatePackageJson(targetDir, answers) {
     pkg.scripts["prebuild"] = "npm run build:css";
     pkg.scripts["build"] = "camper build";
     pkg.scripts["serve"] = "camper serve";
-    pkg.scripts["postinstall"] = "npm run build:css";
+  } else if (cssFramework === "none") {
+    // No CSS framework - just basic scripts
+    delete devDeps["@tailwindcss/cli"];    delete devDeps["@tailwindcss/cli"];    delete devDeps["npm-run-all"];
+    pkg.scripts["dev"] = "camper dev";
+    pkg.scripts["build"] = "camper build";
+    pkg.scripts["serve"] = "camper serve";
   } else {
-    delete devDeps["@tailwindcss/cli"];
-    delete devDeps["tailwindcss"];
-    delete devDeps["npm-run-all"];
+    delete devDeps["@tailwindcss/cli"];    delete devDeps["@tailwindcss/cli"];    delete devDeps["npm-run-all"];
     Object.entries(cssDeps).forEach(([key, [name]]) => {
       if (key !== cssFramework) delete deps[name];
     });
@@ -210,93 +212,6 @@ async function updatePackageJson(targetDir, answers) {
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
 }
 
-async function copyVariantFiles(srcDir, destDir, ext) {
-  if (!existsSync(srcDir)) return;
-  await ensureDir(destDir);
-  const entries = await readdir(srcDir);
-  for (const entry of entries) {
-    if (entry.endsWith(ext)) {
-      await cp(join(srcDir, entry), join(destDir, entry));
-    }
-  }
-}
-
-async function applyTemplateVariants(targetDir, answers) {
-  const wantsNunjucks = answers.templateEngines.includes("nunjucks");
-  const wantsLiquid = answers.templateEngines.includes("liquid");
-  const wantsMustache = answers.templateEngines.includes("mustache");
-  const srcRoot = join(targetDir, "src");
-  const layoutsDir = join(srcRoot, "layouts");
-  const pagesDir = join(srcRoot, "pages");
-  const partialsDir = join(srcRoot, "partials");
-
-  // Reset engine-specific dirs
-  await Promise.all([
-    rm(layoutsDir, { recursive: true, force: true }),
-    rm(pagesDir, { recursive: true, force: true }),
-    rm(partialsDir, { recursive: true, force: true })
-  ]);
-  await Promise.all([ensureDir(layoutsDir), ensureDir(pagesDir), ensureDir(partialsDir)]);
-
-  const njkLayouts = join(variantDir, "layouts");
-  const liquidLayouts = join(variantDir, "layouts");
-  const mustacheLayouts = join(variantDir, "layouts");
-  const njkPages = join(variantDir, "pages");
-  const liquidPages = join(variantDir, "pages");
-  const mustachePages = join(variantDir, "pages");
-  const njkPartials = join(variantDir, "partials");
-  const liquidPartials = join(variantDir, "partials");
-  const mustachePartials = join(variantDir, "partials");
-
-  if (wantsNunjucks) {
-    await copyVariantFiles(njkLayouts, layoutsDir, ".njk");
-    await copyVariantFiles(njkPages, pagesDir, ".njk");
-    await copyVariantFiles(njkPartials, partialsDir, ".njk");
-  }
-
-  if (wantsLiquid) {
-    await copyVariantFiles(liquidLayouts, layoutsDir, ".liquid");
-    await copyVariantFiles(liquidPages, pagesDir, ".liquid");
-    await copyVariantFiles(liquidPartials, partialsDir, ".liquid");
-  }
-
-  if (wantsMustache) {
-    await copyVariantFiles(mustacheLayouts, layoutsDir, ".mustache");
-    await copyVariantFiles(mustachePages, pagesDir, ".mustache");
-    await copyVariantFiles(mustachePartials, partialsDir, ".mustache");
-  }
-
-  // Provide a Markdown starter when requested, pointing at the primary engine layout
-  const primaryEngine = answers.templateEngines[0] || "nunjucks";
-  const layoutExtMap = { liquid: "base.liquid", mustache: "base.mustache", nunjucks: "base.njk" };
-  const mdLayout = layoutExtMap[primaryEngine] || "base.njk";
-
-  if (answers.markdown) {
-    const mdContent = `---
-title: Welcome to CampsiteJS
-layout: ${mdLayout}
-description: Cozy, fast static sites with CampsiteJS.
----
-
-## Welcome, camper
-
-CampsiteJS sets up a warm starter for Markdown, Nunjucks, Liquid, Vue, and Alpine.
-
-- Edit src/pages/index.md to make it yours.
-- Tweak the layout in src/layouts/${mdLayout}.
-- Add data under src/collections/, components in src/components/, and partials in src/partials/.
-
-Happy camping! 🌲🏕️🔥
-`;
-    await writeFile(join(pagesDir, "index.md"), mdContent, "utf8");
-  } else {
-    await rm(join(pagesDir, "index.md"), { force: true }).catch(() => {});
-  }
-
-  // Clean up variant sources from the generated project
-  await rm(join(targetDir, "variants"), { recursive: true, force: true }).catch(() => {});
-}
-
 async function pruneComponents(targetDir, answers) {
   const componentDir = join(targetDir, "src", "components");
   if (!answers.jsFrameworks.includes("vue")) {
@@ -308,11 +223,13 @@ async function pruneComponents(targetDir, answers) {
 }
 
 async function pruneCssFramework(targetDir, answers) {
-  if (answers.cssFramework === "tailwind") return;
-  const tailwindFiles = [
-    join(targetDir, "src", "styles", "tailwind.css")
-  ];
-  await Promise.all(tailwindFiles.map((file) => rm(file).catch(() => {})));
+  // Remove tailwind.css if not using Tailwind (but keep styles.css)
+  if (answers.cssFramework !== "tailwind") {
+    const tailwindFiles = [
+      join(targetDir, "src", "styles", "tailwind.css")
+    ];
+    await Promise.all(tailwindFiles.map((file) => rm(file).catch(() => {})));
+  }
 }
 
 async function installDependencies(targetDir, packageManager) {
@@ -358,8 +275,8 @@ async function main() {
     },
     {
       type: "toggle",
-      name: "markdown",
-      message: "Include Markdown + frontmatter support?",
+      name: "frontmatter",
+      message: "Include Frontmatter?",
       initial: true,
       active: "yes",
       inactive: "no"
@@ -370,11 +287,11 @@ async function main() {
       message: "Choose templating languages",
       hint: "Use space to toggle, enter to confirm",
       instructions: false,
-      min: 1,
+      min: 0,
       choices: [
-        { title: "Nunjucks", value: "nunjucks", selected: true },
-        { title: "Liquid", value: "liquid" },
-        { title: "Mustache", value: "mustache" }
+        { title: "Liquid", value: "liquid", selected: false },
+        { title: "Mustache", value: "mustache", selected: true },
+        { title: "Nunjucks", value: "nunjucks", selected: false }
       ]
     },
     {
@@ -395,6 +312,7 @@ async function main() {
       message: "CSS framework",
       initial: 0,
       choices: [
+        { title: "None", value: "none" },
         { title: "Tailwind CSS", value: "tailwind" },
         { title: "Bootstrap", value: "bootstrap" },
         { title: "Foundation", value: "foundation" },
@@ -459,7 +377,6 @@ async function main() {
   const targetDir = resolve(process.cwd(), answers.projectName);
   await ensureTargetDir(targetDir);
   await copyBaseTemplate(targetDir);
-  await applyTemplateVariants(targetDir, answers);
   await pruneComponents(targetDir, answers);
   await pruneCssFramework(targetDir, answers);
   await writeConfig(targetDir, answers);

@@ -1,9 +1,11 @@
 export default {
+  port: 8080,
   siteName: "Campsite",
+  siteUrl: "https://example.com",
   srcDir: "src",
   outDir: "dist",
   templateEngine: "nunjucks",
-  markdown: true,
+  frontmatter: true,
   minifyCSS: false,
   minifyHTML: false,
   cacheBustAssets: false,
