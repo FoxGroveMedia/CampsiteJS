@@ -371,6 +371,54 @@ async function walkFiles(dir) {
   return results;
 }
 
+async function generateSitemap(outDir, siteUrl) {
+  const htmlFiles = await walkFiles(outDir);
+  const urls = [];
+  
+  for (const file of htmlFiles) {
+    if (extname(file).toLowerCase() !== ".html") continue;
+    
+    // Get relative path from output directory
+    const rel = relative(outDir, file);
+    
+    // Convert file path to URL path
+    let urlPath = rel.replace(/\\/g, "/");
+    
+    // Convert index.html to directory path
+    if (urlPath === "index.html") {
+      urlPath = "";
+    } else if (urlPath.endsWith("/index.html")) {
+      urlPath = urlPath.slice(0, -11); // Remove "/index.html"
+    } else if (urlPath.endsWith(".html")) {
+      urlPath = urlPath.slice(0, -5); // Remove ".html"
+    }
+    
+    // Get file modification time for lastmod
+    const stats = await stat(file);
+    const lastmod = stats.mtime.toISOString().split("T")[0];
+    
+    // Build full URL
+    const fullUrl = siteUrl.replace(/\/$/, "") + "/" + urlPath;
+    
+    urls.push({ loc: fullUrl, lastmod });
+  }
+  
+  // Generate XML sitemap
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  
+  for (const url of urls) {
+    xml += "  <url>\n";
+    xml += `    <loc>${url.loc}</loc>\n`;
+    xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+    xml += "  </url>\n";
+  }
+  
+  xml += "</urlset>\n";
+  
+  return xml;
+}
+
 function createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
   // Allow templates to resolve from layouts, partials, pages, or the src root
   const searchPaths = [layoutsDir, partialsDir, pagesDir, srcDir].filter(Boolean);
@@ -706,6 +754,15 @@ async function build(cwdArg = cwd, options = {}) {
   if (!existsSync(publicRobotsTxt) && !existsSync(distRobotsTxt)) {
     const robotsTxt = `User-agent: *\nAllow: /\n\nSitemap: ${config.siteUrl}/sitemap.xml\n`;
     await writeFile(distRobotsTxt, robotsTxt, "utf8");
+  }
+
+  // Generate sitemap.xml dynamically if it doesn't exist in public directory
+  const publicSitemap = join(publicDir, "sitemap.xml");
+  const distSitemap = join(outDir, "sitemap.xml");
+  if (!existsSync(publicSitemap) && !existsSync(distSitemap)) {
+    const sitemapXml = await generateSitemap(outDir, config.siteUrl);
+    await writeFile(distSitemap, sitemapXml, "utf8");
+    console.log(kolor.green("✓ Generated sitemap.xml"));
   }
 
   console.log(kolor.green(`Built ${files.length} page(s) → ${relative(cwdArg, outDir)}`));

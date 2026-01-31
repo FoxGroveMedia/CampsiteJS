@@ -190,12 +190,16 @@ async function updatePackageJson(targetDir, answers) {
     pkg.scripts["serve"] = "camper serve";
   } else if (cssFramework === "none") {
     // No CSS framework - just basic scripts
-    delete devDeps["@tailwindcss/cli"];    delete devDeps["@tailwindcss/cli"];    delete devDeps["npm-run-all"];
+    delete devDeps["tailwindcss"];
+    delete devDeps["@tailwindcss/cli"];
+    delete devDeps["npm-run-all"];
     pkg.scripts["dev"] = "camper dev";
     pkg.scripts["build"] = "camper build";
     pkg.scripts["serve"] = "camper serve";
   } else {
-    delete devDeps["@tailwindcss/cli"];    delete devDeps["@tailwindcss/cli"];    delete devDeps["npm-run-all"];
+    delete devDeps["tailwindcss"];
+    delete devDeps["@tailwindcss/cli"];
+    delete devDeps["npm-run-all"];
     Object.entries(cssDeps).forEach(([key, [name]]) => {
       if (key !== cssFramework) delete deps[name];
     });
@@ -295,14 +299,15 @@ async function main() {
       ]
     },
     {
-      type: "multiselect",
+      type: "select",
       name: "jsFrameworks",
-      message: "Sprinkle in JS frameworks?",
+      message: "JS Framework",
       hint: "Use space to toggle, enter to confirm",
       instructions: false,
-      min: 0,
+      initial: 0,
       choices: [
-        { title: "Alpine.js", value: "alpine", selected: true },
+        { title: "None", value: "none" },
+        { title: "Alpine.js", value: "alpine" },
         { title: "Vue.js", value: "vue" }
       ]
     },
@@ -310,7 +315,7 @@ async function main() {
       type: "select",
       name: "cssFramework",
       message: "CSS framework",
-      initial: 0,
+      initial: 1,
       choices: [
         { title: "None", value: "none" },
         { title: "Tailwind CSS", value: "tailwind" },
