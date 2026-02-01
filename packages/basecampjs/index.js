@@ -138,7 +138,7 @@ async function loadData(dataDirs) {
     if (!existsSync(dataDir)) continue;
     const files = await walkFiles(dataDir);
     for (const file of files) {
-      if (extname(file).toLowerCase() !== ".json") continue;
+      if (getExt(file) !== ".json") continue;
       const name = basename(file, ".json");
       try {
         const raw = await readFile(file, "utf8");
@@ -160,7 +160,7 @@ function shouldExcludeFile(filePath, excludePatterns) {
   if (!excludePatterns || excludePatterns.length === 0) return false;
   
   const fileName = basename(filePath).toLowerCase();
-  const ext = extname(filePath).toLowerCase();
+  const ext = getExt(filePath);
   
   return excludePatterns.some(pattern => {
     const normalized = pattern.toLowerCase();
@@ -205,7 +205,7 @@ async function copyPublic(publicDir, outDir, excludePatterns = []) {
 
 function shouldProcessImage(filePath, config) {
   if (!config.compressPhotos) return false;
-  const ext = extname(filePath).toLowerCase();
+  const ext = getExt(filePath);
   const inputFormats = config.compressionSettings?.inputFormats || [".jpg", ".jpeg", ".png"];
   return inputFormats.includes(ext);
 }
@@ -318,7 +318,7 @@ function formatBytes(bytes) {
 
 async function minifyCSSFiles(outDir) {
   const files = await walkFiles(outDir);
-  const cssFiles = files.filter((file) => extname(file).toLowerCase() === ".css");
+  const cssFiles = files.filter((file) => getExt(file) === ".css");
 
   await Promise.all(cssFiles.map(async (file) => {
     try {
@@ -333,7 +333,7 @@ async function minifyCSSFiles(outDir) {
 
 async function minifyHTMLFiles(outDir, config) {
   const files = await walkFiles(outDir);
-  const htmlFiles = files.filter((file) => extname(file).toLowerCase() === ".html");
+  const htmlFiles = files.filter((file) => getExt(file) === ".html");
 
   await Promise.all(htmlFiles.map(async (file) => {
     try {
@@ -376,7 +376,7 @@ async function generateSitemap(outDir, siteUrl) {
   const urls = [];
   
   for (const file of htmlFiles) {
-    if (extname(file).toLowerCase() !== ".html") continue;
+    if (getExt(file) !== ".html") continue;
     
     // Get relative path from output directory
     const rel = relative(outDir, file);
@@ -422,20 +422,38 @@ async function generateSitemap(outDir, siteUrl) {
 function createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
   // Allow templates to resolve from layouts, partials, pages, or the src root
   const searchPaths = [layoutsDir, partialsDir, pagesDir, srcDir].filter(Boolean);
-  return new nunjucks.Environment(
+  const env = new nunjucks.Environment(
     new nunjucks.FileSystemLoader(searchPaths, { noCache: true }),
     { autoescape: false }
   );
+  
+  // Add isActive filter for navigation menus
+  // Usage: {{ item.url | isActive(page.path) }}
+  env.addFilter('isActive', function(url, currentPath) {
+    if (!url || !currentPath) return false;
+    return normalizeUrl(url) === normalizeUrl(currentPath);
+  });
+  
+  return env;
 }
 
 function createLiquidEnv(layoutsDir, pagesDir, srcDir, partialsDir) {
   // Liquid loader will search these roots for partials/layouts
   const root = [layoutsDir, partialsDir, pagesDir, srcDir].filter(Boolean);
-  return new Liquid({
+  const liquidEnv = new Liquid({
     root,
     extname: ".liquid",
     cache: false
   });
+  
+  // Add isActive filter for navigation menus
+  // Usage: {{ item.url | isActive: page.path }}
+  liquidEnv.registerFilter('isActive', function(url, currentPath) {
+    if (!url || !currentPath) return false;
+    return normalizeUrl(url) === normalizeUrl(currentPath);
+  });
+  
+  return liquidEnv;
 }
 
 async function loadMustachePartials(partialsDir) {
@@ -445,7 +463,7 @@ async function loadMustachePartials(partialsDir) {
   try {
     const files = await walkFiles(partialsDir);
     await Promise.all(files.map(async (file) => {
-      if (extname(file).toLowerCase() === ".mustache") {
+      if (getExt(file) === ".mustache") {
         const content = await readFile(file, "utf8");
         const partialName = basename(file, ".mustache");
         partials[partialName] = content;
@@ -472,11 +490,47 @@ function toUrlPath(outRel) {
   return path || "/";
 }
 
+function normalizeUrl(url) {
+  if (!url) return "/";
+  let normalized = url.trim();
+  // Remove trailing slashes except for root
+  if (normalized !== "/" && normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
+  // Add leading slash if missing
+  if (!normalized.startsWith("/")) {
+    normalized = "/" + normalized;
+  }
+  // Strip .html extension for comparison (so /about and /about.html match)
+  if (normalized !== "/" && normalized.endsWith(".html")) {
+    normalized = normalized.slice(0, -5);
+  }
+  return normalized;
+}
+
+// Helper to get file extension in lowercase
+function getExt(filePath) {
+  return extname(filePath).toLowerCase();
+}
+
+// Helper to read and parse frontmatter from a file
+async function readWithFrontmatter(filePath) {
+  const raw = await readFile(filePath, "utf8");
+  return matter(raw);
+}
+
 function pageContext(frontmatter, html, config, relPath, data, path = "/") {
+  // Helper function to check if a URL is active/current
+  const isActive = (url) => {
+    if (!url) return false;
+    return normalizeUrl(path) === normalizeUrl(url);
+  };
+  
   return {
     site: { name: config.siteName, config },
     page: { ...frontmatter, content: html, source: relPath, path },
     collections: data,
+    isActive,
     ...data
   };
 }
@@ -488,7 +542,7 @@ function shouldRenderMarkdown(frontmatter, config, defaultValue) {
 
 async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDir, partials = {}) {
   if (!layoutName) return html;
-  const ext = extname(layoutName).toLowerCase();
+  const ext = getExt(layoutName);
   const layoutCtx = {
     ...ctx,
     frontmatter: ctx.page || {},
@@ -518,7 +572,7 @@ async function renderWithLayout(layoutName, html, ctx, env, liquidEnv, layoutsDi
 
 async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidEnv, config, data, partialsDir }) {
   const rel = relative(pagesDir, filePath);
-  const ext = extname(filePath).toLowerCase();
+  const ext = getExt(filePath);
   const outRel = rel.replace(/\.liquid(\.html)?$/i, ".html").replace(ext, ".html");
   const outPath = join(outDir, outRel);
   const path = toUrlPath(outRel);
@@ -529,66 +583,61 @@ async function renderPage(filePath, { pagesDir, layoutsDir, outDir, env, liquidE
     ? await loadMustachePartials(partialsDir) 
     : {};
 
-  if (ext === ".md") {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = matter(raw);
-    const html = md.render(parsed.content);
-    const ctx = pageContext(parsed.data, html, config, rel, data, path);
-    const rendered = await renderWithLayout(parsed.data.layout, html, ctx, env, liquidEnv, layoutsDir, partials);
+  // Helper function to finalize and write the rendered page
+  const finalizePage = async (pageHtml, frontmatter) => {
+    const ctx = pageContext(frontmatter, pageHtml, config, rel, data, path);
+    const rendered = await renderWithLayout(frontmatter.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
     await writeFile(outPath, rendered, "utf8");
+  };
+
+  if (ext === ".md") {
+    const parsed = await readWithFrontmatter(filePath);
+    const html = md.render(parsed.content);
+    await finalizePage(html, parsed.data);
     return;
   }
 
   if (ext === ".njk") {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = matter(raw);
+    const parsed = await readWithFrontmatter(filePath);
     const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
     const templateName = rel.replace(/\\/g, "/");
     let pageHtml = env.renderString(parsed.content, ctx, { path: templateName });
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
-    await writeFile(outPath, rendered, "utf8");
+    await finalizePage(pageHtml, parsed.data);
     return;
   }
 
   if (ext === ".liquid" || filePath.toLowerCase().endsWith(".liquid.html")) {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = matter(raw);
+    const parsed = await readWithFrontmatter(filePath);
     const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
     let pageHtml = await liquidEnv.parseAndRender(parsed.content, ctx);
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
-    await writeFile(outPath, rendered, "utf8");
+    await finalizePage(pageHtml, parsed.data);
     return;
   }
 
   if (ext === ".mustache") {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = matter(raw);
+    const parsed = await readWithFrontmatter(filePath);
     const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
     let pageHtml = Mustache.render(parsed.content, ctx, partials);
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
-    await writeFile(outPath, rendered, "utf8");
+    await finalizePage(pageHtml, parsed.data);
     return;
   }
 
   if (ext === ".html") {
-    const raw = await readFile(filePath, "utf8");
-    const parsed = matter(raw);
-    const ctx = pageContext(parsed.data, parsed.content, config, rel, data, path);
+    const parsed = await readWithFrontmatter(filePath);
     let pageHtml = parsed.content;
     if (shouldRenderMarkdown(parsed.data, config, false)) {
       pageHtml = md.render(pageHtml);
     }
-    const rendered = await renderWithLayout(parsed.data.layout, pageHtml, ctx, env, liquidEnv, layoutsDir, partials);
-    await writeFile(outPath, rendered, "utf8");
+    await finalizePage(pageHtml, parsed.data);
     return;
   }
 
@@ -599,7 +648,7 @@ async function cacheBustAssets(outDir) {
   const assetMap = {}; // original path -> hashed path
   const files = await walkFiles(outDir);
   const assetFiles = files.filter((file) => {
-    const ext = extname(file).toLowerCase();
+    const ext = getExt(file);
     return ext === ".css" || ext === ".js";
   });
 
@@ -629,7 +678,7 @@ async function cacheBustAssets(outDir) {
   }
 
   // Update HTML files to reference hashed assets
-  const htmlFiles = files.filter((file) => extname(file).toLowerCase() === ".html");
+  const htmlFiles = files.filter((file) => getExt(file) === ".html");
   
   for (const htmlFile of htmlFiles) {
     try {
@@ -810,7 +859,7 @@ function serve(outDir, port = 4173) {
 
     try {
       const data = await readFile(filePath);
-      const type = mime[extname(filePath).toLowerCase()] || "text/plain";
+      const type = mime[getExt(filePath)] || "text/plain";
       res.writeHead(isNotFoundResponse ? 404 : 200, { "Content-Type": type });
       res.end(data);
     } catch {
