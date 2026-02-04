@@ -1,21 +1,40 @@
 {
   "name": "basecampjs",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "type": "module",
   "description": "BasecampJS engine for CampsiteJS static site generator.",
   "bin": {
-    "camper": "./index.js",
-    "campsite": "./index.js"
+    "camper": "./dist/index.js",
+    "campsite": "./dist/index.js"
   },
   "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "node dist/index.js dev",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "csso": "^5.0.5",
-    "html-minifier-terser": "^7.2.0",
     "chokidar": "^3.6.0",
+    "csso": "^5.0.5",
     "gray-matter": "^4.0.3",
+    "html-minifier-terser": "^7.2.0",
     "kolorist": "^1.8.0",
     "liquidjs": "^10.12.0",
     "markdown-it": "^14.1.0",
@@ -25,5 +44,16 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/csso": "^5.0.4",
+    "@types/html-minifier-terser": "^7.0.2",
+    "@types/markdown-it": "^14.1.2",
+    "@types/mustache": "^4.2.6",
+    "@types/node": "^25.2.0",
+    "@types/nunjucks": "^3.2.6",
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }
