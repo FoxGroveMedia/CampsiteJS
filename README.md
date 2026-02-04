@@ -3,6 +3,7 @@
 ![License MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg?color=3eb812)
 ![Monthly Downloads](https://img.shields.io/npm/dm/create-campsitejs?color=3eb812)
 ![docs](https://img.shields.io/website?url=https%3A%2F%2Fcampsitejs.dev&up_message=online&label=docs&color=3eb812)
+![Tests](https://github.com/FoxGroveMedia/CampsiteJS/actions/workflows/test.yml/badge.svg)
 
 # ⛺ CampsiteJS - A Cozy Static Site Generator
 Welcome to CampsiteJS, the static site generator that feels like a weekend in the woods. Pack light, pitch fast, and ship sites with a cozy developer experience.
