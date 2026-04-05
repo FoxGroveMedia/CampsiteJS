@@ -40,8 +40,9 @@ export async function dev(cwdArg: string = process.cwd()): Promise<void> {
   const dataDir = join(srcDir, "data");
   const collectionsDir = join(srcDir, "collections");
   const publicDir = resolve(cwdArg, "public");
+  const staticDir = resolve(cwdArg, "static");
   const outDir = resolve(cwdArg, config.outDir || "dist");
-  const watcher = chokidar.watch([srcDir, publicDir, dataDir, collectionsDir], { ignoreInitial: true });
+  const watcher = chokidar.watch([srcDir, publicDir, staticDir, dataDir, collectionsDir], { ignoreInitial: true });
 
   watcher.on("all", (event: string, path: string) => {
     console.log(kolor.cyan(`↻ ${event}: ${relative(cwdArg, path)}`));

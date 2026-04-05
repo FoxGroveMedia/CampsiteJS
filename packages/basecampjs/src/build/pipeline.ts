@@ -22,6 +22,7 @@ export async function build(cwdArg: string = process.cwd(), options: BuildOption
   const dataDir = join(srcDir, "data");
   const collectionsDir = join(srcDir, "collections");
   const publicDir = resolve(cwdArg, "public");
+  const staticDir = resolve(cwdArg, "static");
   const outDir = resolve(cwdArg, config.outDir || "dist");
   const env = createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir);
   
@@ -51,6 +52,7 @@ export async function build(cwdArg: string = process.cwd(), options: BuildOption
 
   await cleanDir(outDir);
   await copyPublic(publicDir, outDir, config.excludeFiles);
+  await copyPublic(staticDir, outDir, config.excludeFiles);
 
   // Only compress photos during production builds, not during dev mode
   const shouldCompressPhotos = options.skipImageCompression !== true && config.compressPhotos;

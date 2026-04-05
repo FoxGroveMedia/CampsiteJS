@@ -81,6 +81,31 @@ This is a test.`;
     expect(content).toBe('body { margin: 0; }');
   });
 
+  it('copies static directory to output', async () => {
+    const staticDir = join(testDir, 'static');
+    const imgDir = join(staticDir, 'img');
+    const srcDir = join(testDir, 'src', 'pages');
+    const outDir = join(testDir, 'dist');
+    await mkdir(imgDir, { recursive: true });
+    await mkdir(srcDir, { recursive: true });
+    
+    // Create static assets
+    await writeFile(join(staticDir, 'styles.css'), 'h1 { color: red; }');
+    await writeFile(join(imgDir, 'logo.svg'), '<svg></svg>');
+    await writeFile(join(srcDir, 'index.html'), '<html><body>Test</body></html>');
+    
+    // Run the build
+    await build(testDir, {});
+    
+    // Assert static files were copied with directory structure preserved
+    const cssFile = join(outDir, 'styles.css');
+    const imgFile = join(outDir, 'img', 'logo.svg');
+    const cssContent = await readFile(cssFile, 'utf-8');
+    const imgContent = await readFile(imgFile, 'utf-8');
+    expect(cssContent).toBe('h1 { color: red; }');
+    expect(imgContent).toBe('<svg></svg>');
+  });
+
   it('generates sitemap.xml', async () => {
     const srcDir = join(testDir, 'src', 'pages');
     const outDir = join(testDir, 'dist');

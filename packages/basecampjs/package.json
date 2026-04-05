@@ -1,6 +1,6 @@
 {
   "name": "basecampjs",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "type": "module",
   "description": "BasecampJS engine for CampsiteJS static site generator.",
   "bin": {
