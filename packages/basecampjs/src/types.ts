@@ -28,6 +28,7 @@ export interface CampsiteConfig {
   siteUrl: string;
   srcDir: string;
   outDir: string;
+  staticDir: string;
   templateEngine: 'nunjucks' | 'liquid' | 'mustache' | string;
   frontmatter: boolean;
   minifyCSS: boolean;

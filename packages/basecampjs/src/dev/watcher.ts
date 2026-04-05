@@ -39,7 +39,7 @@ export async function dev(cwdArg: string = process.cwd()): Promise<void> {
   const srcDir = resolve(cwdArg, config.srcDir || "src");
   const dataDir = join(srcDir, "data");
   const collectionsDir = join(srcDir, "collections");
-  const publicDir = resolve(cwdArg, "public");
+  const publicDir = resolve(cwdArg, config.staticDir || "public");
   const outDir = resolve(cwdArg, config.outDir || "dist");
   const watcher = chokidar.watch([srcDir, publicDir, dataDir, collectionsDir], { ignoreInitial: true });
 

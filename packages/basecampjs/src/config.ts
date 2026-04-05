@@ -12,6 +12,7 @@ export const defaultConfig: CampsiteConfig = {
   siteUrl: "https://example.com",
   srcDir: "src",
   outDir: "dist",
+  staticDir: "public",
   templateEngine: "nunjucks",
   frontmatter: true,
   minifyCSS: false,
@@ -38,7 +39,11 @@ export async function loadConfig(root: string): Promise<CampsiteConfig> {
   try {
     const imported = await import(pathToFileURL(configPath).href);
     const user = imported.default || imported;
-    return { ...defaultConfig, ...user };
+    const merged = { ...defaultConfig, ...user };
+    if (merged.outDir === "public" && !("staticDir" in user)) {
+      merged.staticDir = "static";
+    }
+    return merged;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(kolor.red(`Failed to load config: ${message}`));

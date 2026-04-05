@@ -179,7 +179,7 @@ export async function check(): Promise<void> {
   const srcDir = resolve(cwd, config.srcDir || "src");
   const pagesDir = join(srcDir, "pages");
   const layoutsDir = join(srcDir, "layouts");
-  const publicDir = resolve(cwd, "public");
+  const publicDir = resolve(cwd, config.staticDir || "public");
 
   // Check src directory
   if (!existsSync(srcDir)) {
@@ -211,11 +211,11 @@ export async function check(): Promise<void> {
     console.log(kolor.dim(`ℹ️  No layouts directory (${relative(cwd, layoutsDir)})`));
   }
 
-  // Check public directory
+  // Check static assets directory
   if (existsSync(publicDir)) {
-    console.log(kolor.green(`✅ Public directory exists: ${relative(cwd, publicDir)}`));
+    console.log(kolor.green(`✅ Static directory exists: ${relative(cwd, publicDir)}`));
   } else {
-    console.log(kolor.dim(`ℹ️  No public directory (${relative(cwd, publicDir)})`));
+    console.log(kolor.dim(`ℹ️  No static directory (${relative(cwd, publicDir)})`));
   }
 
   // Check for package.json and dependencies

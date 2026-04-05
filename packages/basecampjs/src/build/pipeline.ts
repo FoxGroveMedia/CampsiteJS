@@ -21,7 +21,7 @@ export async function build(cwdArg: string = process.cwd(), options: BuildOption
   const partialsDir = join(srcDir, "partials");
   const dataDir = join(srcDir, "data");
   const collectionsDir = join(srcDir, "collections");
-  const publicDir = resolve(cwdArg, "public");
+  const publicDir = resolve(cwdArg, config.staticDir || "public");
   const outDir = resolve(cwdArg, config.outDir || "dist");
   const env = createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir);
   
