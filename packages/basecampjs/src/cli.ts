@@ -6,7 +6,7 @@ import { loadConfig, getVersion } from "./config.js";
 import { build } from "./build/pipeline.js";
 import { serve } from "./dev/server.js";
 import { dev } from "./dev/watcher.js";
-import { init, clean, check, list, upgrade, makeContent } from "./scaffolding.js";
+import { init, clean, check, list, upgrade, makeContent, addTemplate } from "./scaffolding.js";
 import { kolor } from "./utils/logger.js";
 
 const cwd = process.cwd();
@@ -50,6 +50,11 @@ function showHelp(): void {
   console.log("  " + kolor.cyan("make:partial") + " " + kolor.dim("<name>") + " Create a new partial in src/partials/");
   console.log("  " + kolor.cyan("make:collection") + " " + kolor.dim("<name>") + " Create a new JSON collection in src/collections/\n");
   
+  console.log(kolor.bold("Template Commands:"));
+  console.log("  " + kolor.cyan("add:template") + " " + kolor.dim("[name]") + "  Install a starter template (single-page, basic-site, blog, docs)");
+  console.log("                    Prompts if no template name provided");
+  console.log("                    Use --force to overwrite all conflicting files\n");
+  
   console.log(kolor.bold("Options:"));
   console.log("  -h, --help        Show this help message");
   console.log("  -v, --version     Show version number\n");
@@ -59,6 +64,9 @@ function showHelp(): void {
   console.log("  camper init\n");
   console.log("  " + kolor.dim("# Start development"));
   console.log("  camper dev\n");
+  console.log("  " + kolor.dim("# Add a starter template"));
+  console.log("  camper add:template blog");
+  console.log("  camper add:template --force\n");
   console.log("  " + kolor.dim("# Create new content"));
   console.log("  camper make:page about");
   console.log("  camper make:post \"My First Post\"");
@@ -104,6 +112,20 @@ export async function main(): Promise<void> {
     }
     await makeContent(type, argv.slice(3));
     return;
+  }
+
+  // Handle add:template command
+  if (command.startsWith("add:")) {
+    const type = command.substring(4); // Remove 'add:' prefix
+    if (type === "template") {
+      const templateName = argv[3];
+      const hasForceFlag = argv.includes("--force") || argv.includes("-f");
+      await addTemplate(templateName, hasForceFlag);
+      return;
+    }
+    console.log(kolor.red(`❌ Unknown add command: add:${type}`));
+    console.log(kolor.dim("Run 'camper --help' for available commands.\n"));
+    exit(1);
   }
 
   switch (command) {

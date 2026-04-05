@@ -1,11 +1,15 @@
 import { existsSync } from "fs";
-import { readFile, readdir, rm, writeFile } from "fs/promises";
+import { readFile, readdir, rm, writeFile, cp, mkdir } from "fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "path";
 import { loadConfig } from "./config.js";
 import { ensureDir, walkFiles, getExt } from "./utils/fs.js";
 import { slugify, formatDate } from "./utils/paths.js";
 import { kolor } from "./utils/logger.js";
 import type { CampsiteConfig, MakeContentResult } from "./types.js";
+import prompts from "prompts";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
+import { Readable } from "stream";
 
 const cwd = process.cwd();
 
@@ -470,6 +474,251 @@ export async function makeContent(type: string, args: string[]): Promise<void> {
     console.log(kolor.yellow(`⚠️  Skipped ${skipCount} existing file(s)`));
   }
   console.log(kolor.dim("\n🌲 Happy camping!\n"));
+}
+
+/**
+ * Add a template to the current project from the CampsiteTemplates repository
+ */
+export async function addTemplate(templateName?: string, force: boolean = false): Promise<void> {
+  console.log(kolor.cyan(kolor.bold("\n🏕️  Add Template to Project\n")));
+
+  // Check if in a Campsite project
+  if (!existsSync(join(cwd, "campsite.config.js"))) {
+    console.log(kolor.red("❌ Not in a Campsite project directory"));
+    console.log(kolor.dim("   Run this command from a project initialized with create-campsitejs\n"));
+    process.exit(1);
+  }
+
+  const REPO_OWNER = "FoxGroveMedia";
+  const REPO_NAME = "CampsiteTemplates";
+  const BRANCH = "main";
+
+  // Available templates
+  const availableTemplates = ["single-page", "basic-site", "blog", "docs"];
+
+  // If no template specified, prompt user
+  if (!templateName) {
+    const response = await prompts({
+      type: "select",
+      name: "template",
+      message: "Choose a template to install:",
+      choices: availableTemplates.map(t => ({ title: t, value: t }))
+    });
+
+    if (!response.template) {
+      console.log(kolor.yellow("\n⚠️  Template installation cancelled\n"));
+      return;
+    }
+    templateName = response.template;
+  }
+
+  // Validate template name
+  if (!templateName || !availableTemplates.includes(templateName)) {
+    console.log(kolor.red(`❌ Unknown template: ${templateName || "none"}`));
+    console.log(kolor.dim(`\nAvailable templates: ${availableTemplates.join(", ")}\n`));
+    process.exit(1);
+  }
+
+  console.log(kolor.cyan(`📦 Fetching ${templateName} template...\n`));
+
+  try {
+    // Get list of files in the template from GitHub API
+    const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${templateName}`;
+    
+    const files = await fetchTemplateFiles(apiUrl, templateName);
+    
+    if (files.length === 0) {
+      console.log(kolor.red(`❌ Template '${templateName}' appears to be empty or doesn't exist\n`));
+      process.exit(1);
+    }
+
+    // Analyze conflicts
+    const conflicts: string[] = [];
+    const newFiles: string[] = [];
+
+    for (const file of files) {
+      const targetPath = join(cwd, file.path);
+      if (existsSync(targetPath)) {
+        conflicts.push(file.path);
+      } else {
+        newFiles.push(file.path);
+      }
+    }
+
+    // Show what will be added
+    if (newFiles.length > 0) {
+      console.log(kolor.green("The following files will be added:"));
+      newFiles.forEach(f => console.log(kolor.dim(`  ✨ ${f}`)));
+      console.log();
+    }
+
+    // Handle conflicts
+    let conflictStrategy: "skip" | "overwrite" | "review" | "abort" = "skip";
+
+    if (conflicts.length > 0 && !force) {
+      console.log(kolor.yellow("⚠️  Conflicts detected:"));
+      conflicts.forEach(f => console.log(kolor.dim(`  ❗ ${f} (already exists)`)));
+      console.log();
+
+      const response = await prompts({
+        type: "select",
+        name: "strategy",
+        message: "How to handle conflicts?",
+        choices: [
+          { title: "Skip conflicting files (keep yours)", value: "skip" },
+          { title: "Overwrite with template versions", value: "overwrite" },
+          { title: "Review each file individually", value: "review" },
+          { title: "Abort installation", value: "abort" }
+        ]
+      });
+
+      if (!response.strategy || response.strategy === "abort") {
+        console.log(kolor.yellow("\n⚠️  Template installation cancelled\n"));
+        return;
+      }
+
+      conflictStrategy = response.strategy;
+    } else if (force) {
+      conflictStrategy = "overwrite";
+    }
+
+    // Create backup directory if overwriting
+    const backupDir = join(cwd, ".campsite-backup", new Date().toISOString().replace(/:/g, "-"));
+    if (conflictStrategy === "overwrite" || conflictStrategy === "review") {
+      await ensureDir(backupDir);
+    }
+
+    // Process files
+    console.log(kolor.cyan("📥 Installing template files...\n"));
+    
+    let installedCount = 0;
+    let skippedCount = 0;
+    let backedUpCount = 0;
+
+    for (const file of files) {
+      const targetPath = join(cwd, file.path);
+      const isConflict = conflicts.includes(file.path);
+
+      if (isConflict) {
+        let shouldOverwrite = conflictStrategy === "overwrite";
+
+        if (conflictStrategy === "review") {
+          const response = await prompts({
+            type: "select",
+            name: "action",
+            message: `${file.path} already exists. What to do?`,
+            choices: [
+              { title: "Keep existing", value: "skip" },
+              { title: "Overwrite with template", value: "overwrite" }
+            ]
+          });
+
+          shouldOverwrite = response.action === "overwrite";
+        }
+
+        if (!shouldOverwrite) {
+          console.log(kolor.dim(`  ⏭️  Skipped ${file.path}`));
+          skippedCount++;
+          continue;
+        }
+
+        // Backup existing file
+        const backupPath = join(backupDir, file.path);
+        await ensureDir(dirname(backupPath));
+        await cp(targetPath, backupPath);
+        backedUpCount++;
+        console.log(kolor.dim(`  💾 Backed up ${file.path}`));
+      }
+
+      // Download and save file
+      await ensureDir(dirname(targetPath));
+      await downloadFile(file.download_url, targetPath);
+      console.log(kolor.dim(`  ✅ ${file.path}`));
+      installedCount++;
+    }
+
+    console.log();
+    console.log(kolor.green(`✅ Template installation complete!`));
+    console.log(kolor.dim(`   Installed: ${installedCount} files`));
+    if (skippedCount > 0) {
+      console.log(kolor.dim(`   Skipped: ${skippedCount} files`));
+    }
+    if (backedUpCount > 0) {
+      console.log(kolor.dim(`   Backed up: ${backedUpCount} files to ${relative(cwd, backupDir)}`));
+    }
+    console.log();
+    console.log(kolor.dim("🌲 Run 'camper dev' to see your new template in action!\n"));
+
+  } catch (error) {
+    if (error instanceof Error) {
+      console.log(kolor.red(`❌ Failed to fetch template: ${error.message}\n`));
+    } else {
+      console.log(kolor.red(`❌ Failed to fetch template\n`));
+    }
+    process.exit(1);
+  }
+}
+
+/**
+ * Recursively fetch all files from a GitHub directory
+ */
+async function fetchTemplateFiles(
+  apiUrl: string,
+  basePath: string,
+  allFiles: Array<{ path: string; download_url: string }> = []
+): Promise<Array<{ path: string; download_url: string }>> {
+  const response = await fetch(apiUrl);
+  
+  if (!response.ok) {
+    throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+  }
+
+  const items = await response.json() as Array<{
+    type: string;
+    path: string;
+    name: string;
+    download_url: string;
+    url: string;
+  }>;
+
+  for (const item of items) {
+    if (item.name === "README.md") {
+      // Skip README files from templates
+      continue;
+    }
+
+    if (item.type === "file") {
+      // Store relative path (remove template name prefix)
+      const relativePath = item.path.replace(`${basePath}/`, "");
+      allFiles.push({
+        path: relativePath,
+        download_url: item.download_url
+      });
+    } else if (item.type === "dir") {
+      // Recursively fetch directory contents
+      await fetchTemplateFiles(item.url, basePath, allFiles);
+    }
+  }
+
+  return allFiles;
+}
+
+/**
+ * Download a file from URL to local path
+ */
+async function downloadFile(url: string, targetPath: string): Promise<void> {
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to download ${url}: ${response.status}`);
+  }
+
+  if (!response.body) {
+    throw new Error(`No response body for ${url}`);
+  }
+
+  const fileStream = createWriteStream(targetPath);
+  await pipeline(Readable.fromWeb(response.body as any), fileStream);
 }
 
 async function createSingleContent(
