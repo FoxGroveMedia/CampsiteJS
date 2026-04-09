@@ -40,6 +40,12 @@ export async function loadConfig(root: string): Promise<CampsiteConfig> {
     const imported = await import(pathToFileURL(configPath).href);
     const user = imported.default || imported;
     const merged = { ...defaultConfig, ...user };
+    if (user.compressionSettings) {
+      merged.compressionSettings = { ...defaultConfig.compressionSettings, ...user.compressionSettings };
+    }
+    if (user.integrations) {
+      merged.integrations = { ...defaultConfig.integrations, ...user.integrations };
+    }
     if (merged.outDir === "public" && !("staticDir" in user)) {
       merged.staticDir = "static";
     }

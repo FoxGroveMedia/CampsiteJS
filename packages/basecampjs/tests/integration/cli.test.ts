@@ -61,7 +61,7 @@ describe('CLI integration tests', () => {
     const result = await runCLI(['--help'], testDir);
     expect(result.code).toBe(0);
     expect(result.stdout).toContain('Usage:');
-    expect(result.stdout).toContain('Commands:');
+    expect(result.stdout).toContain('Development Commands:');
   });
 
   it('creates a page with make:page', async () => {

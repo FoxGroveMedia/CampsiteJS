@@ -28,7 +28,7 @@ export { loadConfig, defaultConfig, getVersion } from "./config.js";
 export { build } from "./build/pipeline.js";
 export { serve } from "./dev/server.js";
 export { dev } from "./dev/watcher.js";
-export { init, clean, check, list, upgrade, makeContent } from "./scaffolding.js";
+export { init, clean, check, list, upgrade, makeContent, addTemplate } from "./scaffolding.js";
 
 // Template engine utilities
 export { createNunjucksEnv, createLiquidEnv, md } from "./render/engines.js";

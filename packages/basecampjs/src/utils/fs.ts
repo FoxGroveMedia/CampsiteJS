@@ -102,6 +102,7 @@ export async function copyPublic(publicDir: string, outDir: string, excludePatte
  */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
+  if (bytes < 0) return "-" + formatBytes(-bytes);
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));

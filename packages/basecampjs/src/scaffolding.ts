@@ -133,7 +133,7 @@ dist/
       preview: "camper preview"
     },
     dependencies: {
-      basecampjs: "^0.0.15"
+      basecampjs: "^0.0.18"
     }
   };
   await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");
@@ -822,8 +822,8 @@ author: Your Name
     case "layout": {
       const layoutsDir = join(srcDir, "layouts");
       await ensureDir(layoutsDir);
-      targetPath = join(layoutsDir, `${slug}.njk`);
-      fileExt = ".njk";
+      targetPath = join(layoutsDir, `${slug}${defaultExt}`);
+      fileExt = defaultExt;
       content = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -847,8 +847,8 @@ author: Your Name
     case "component": {
       const componentsDir = join(srcDir, "components");
       await ensureDir(componentsDir);
-      targetPath = join(componentsDir, `${slug}.njk`);
-      fileExt = ".njk";
+      targetPath = join(componentsDir, `${slug}${defaultExt}`);
+      fileExt = defaultExt;
       content = `{# ${title} Component #}
 <div class="${slug}">
   {{ content | safe }}
@@ -860,8 +860,8 @@ author: Your Name
     case "partial": {
       const partialsDir = join(srcDir, "partials");
       await ensureDir(partialsDir);
-      targetPath = join(partialsDir, `${slug}.njk`);
-      fileExt = ".njk";
+      targetPath = join(partialsDir, `${slug}${defaultExt}`);
+      fileExt = defaultExt;
       content = `{# ${title} Partial #}
 <div class="${slug}">
   {# Your partial content here #}

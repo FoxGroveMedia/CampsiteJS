@@ -1,4 +1,4 @@
-import { join, relative, resolve } from "path";
+import { relative, resolve } from "path";
 import chokidar from "chokidar";
 import { loadConfig } from "../config.js";
 import { build } from "../build/pipeline.js";
@@ -37,11 +37,9 @@ export async function dev(cwdArg: string = process.cwd()): Promise<void> {
 
   const config = await loadConfig(cwdArg);
   const srcDir = resolve(cwdArg, config.srcDir || "src");
-  const dataDir = join(srcDir, "data");
-  const collectionsDir = join(srcDir, "collections");
   const publicDir = resolve(cwdArg, config.staticDir || "public");
   const outDir = resolve(cwdArg, config.outDir || "dist");
-  const watcher = chokidar.watch([srcDir, publicDir, dataDir, collectionsDir], { ignoreInitial: true });
+  const watcher = chokidar.watch([srcDir, publicDir], { ignoreInitial: true });
 
   watcher.on("all", (event: string, path: string) => {
     console.log(kolor.cyan(`↻ ${event}: ${relative(cwdArg, path)}`));

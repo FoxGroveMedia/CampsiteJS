@@ -133,8 +133,8 @@ async function writeConfig(targetDir, answers) {
     nunjucks: ${answers.templateEngines.includes("nunjucks")},
     liquid: ${answers.templateEngines.includes("liquid")},
     mustache: ${answers.templateEngines.includes("mustache")},
-    vue: ${answers.jsFrameworks.includes("vue")},
-    alpine: ${answers.jsFrameworks.includes("alpine")}
+    vue: ${answers.jsFrameworks === "vue"},
+    alpine: ${answers.jsFrameworks === "alpine"}
   }
 };
 `;
@@ -155,14 +155,13 @@ async function updatePackageJson(targetDir, answers) {
     const relCore = relative(targetDir, localCoreDir) || ".";
     deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecampjs"] = "^0.0.15";
+    deps["basecampjs"] = "^0.0.18";
   }
-  if (answers.templateEngines.includes("markdown")) devDeps["markdown-it"] = "^14.1.0";
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
   if (answers.templateEngines.includes("mustache")) devDeps["mustache"] = "^4.2.0";
-  if (answers.jsFrameworks.includes("vue")) deps["vue"] = "^3.4.0";
-  if (answers.jsFrameworks.includes("alpine")) deps["alpinejs"] = "^3.13.0";
+  if (answers.jsFrameworks === "vue") deps["vue"] = "^3.4.0";
+  if (answers.jsFrameworks === "alpine") deps["alpinejs"] = "^3.13.0";
 
   // CSS framework selection
   const cssFramework = answers.cssFramework || "none";
@@ -218,10 +217,10 @@ async function updatePackageJson(targetDir, answers) {
 
 async function pruneComponents(targetDir, answers) {
   const componentDir = join(targetDir, "src", "components");
-  if (!answers.jsFrameworks.includes("vue")) {
+  if (answers.jsFrameworks !== "vue") {
     await rm(join(componentDir, "HelloCampsite.vue")).catch(() => {});
   }
-  if (!answers.jsFrameworks.includes("alpine")) {
+  if (answers.jsFrameworks !== "alpine") {
     await rm(join(componentDir, "alpine-card.html")).catch(() => {});
   }
 }
