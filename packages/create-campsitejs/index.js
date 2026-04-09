@@ -153,9 +153,9 @@ async function updatePackageJson(targetDir, answers) {
   const localCoreDir = resolve(__dirname, "../basecampjs");
   if (existsSync(localCoreDir)) {
     const relCore = relative(targetDir, localCoreDir) || ".";
-    devDeps["basecampjs"] = `file:${relCore}`;
+    deps["basecampjs"] = `file:${relCore}`;
   } else {
-    devDeps["basecampjs"] = "^0.0.1";
+    deps["basecampjs"] = "^0.0.15";
   }
   if (answers.templateEngines.includes("markdown")) devDeps["markdown-it"] = "^14.1.0";
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";

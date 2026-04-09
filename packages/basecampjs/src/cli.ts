@@ -170,8 +170,3 @@ export async function main(): Promise<void> {
   }
 }
 
-// Run CLI if this is the entry point
-main().catch((err) => {
-  console.error(err);
-  exit(1);
-});

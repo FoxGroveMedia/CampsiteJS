@@ -26,6 +26,7 @@
     "dev": "node dist/index.js dev",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit",
+    "pretest": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"
