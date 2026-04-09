@@ -41,10 +41,10 @@ function showHelp(version) {
   
   console.log(kleur.bold("After Setup:"));
   console.log("  cd your-project-name");
-  console.log("  camper dev          " + kleur.dim("# Start development server"));
-  console.log("  camper build        " + kleur.dim("# Build for production"));
-  console.log("  camper make:page    " + kleur.dim("# Create new content"));
-  console.log("  camper --help       " + kleur.dim("# See all available commands\n"));
+  console.log("  npm run dev         " + kleur.dim("# Start development server"));
+  console.log("  npm run build       " + kleur.dim("# Build for production"));
+  console.log("  npx camper make:page" + kleur.dim("# Create new content"));
+  console.log("  npx camper --help   " + kleur.dim("# See all available commands\n"));
   
   console.log(kleur.dim("For more information, visit: https://campsitejs.dev"));
   console.log();
@@ -155,7 +155,7 @@ async function updatePackageJson(targetDir, answers) {
     const relCore = relative(targetDir, localCoreDir) || ".";
     deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecampjs"] = "^0.0.18";
+    deps["basecampjs"] = "^0.0.19";
   }
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";

@@ -133,7 +133,7 @@ dist/
       preview: "camper preview"
     },
     dependencies: {
-      basecampjs: "^0.0.18"
+      basecampjs: "^0.0.19"
     }
   };
   await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");
