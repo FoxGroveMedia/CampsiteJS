@@ -11,8 +11,8 @@ export const defaultConfig: CampsiteConfig = {
   siteName: "Campsite",
   siteUrl: "https://example.com",
   srcDir: "src",
-  outDir: "dist",
-  staticDir: "public",
+  outDir: "public",
+  staticDir: "static",
   templateEngine: "nunjucks",
   frontmatter: true,
   minifyCSS: false,
@@ -46,8 +46,14 @@ export async function loadConfig(root: string): Promise<CampsiteConfig> {
     if (user.integrations) {
       merged.integrations = { ...defaultConfig.integrations, ...user.integrations };
     }
-    if (merged.outDir === "public" && !("staticDir" in user)) {
-      merged.staticDir = "static";
+    // Auto-derive staticDir to avoid collision if user didn't explicitly set it
+    if (!("staticDir" in user)) {
+      if (merged.outDir === "public") {
+        merged.staticDir = "static";
+      } else if (merged.outDir === "static") {
+        merged.staticDir = "public";
+      }
+      // for other outDirs (e.g. "dist"), keep the "static" default
     }
     return merged;
   } catch (err) {

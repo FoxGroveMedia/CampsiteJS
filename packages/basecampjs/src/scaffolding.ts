@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { readFile, readdir, rm, writeFile, cp, mkdir } from "fs/promises";
 import { basename, dirname, extname, join, relative, resolve } from "path";
 import { loadConfig } from "./config.js";
@@ -12,6 +12,41 @@ import { pipeline } from "stream/promises";
 import { Readable } from "stream";
 
 const cwd = process.cwd();
+
+/**
+ * Detect the user's preferred package manager.
+ * Priority:
+ *  1. packageManager field in an existing package.json (Corepack style)
+ *  2. npm_config_user_agent environment variable (set by npm/pnpm/yarn/bun)
+ *  3. Default to npm
+ */
+function detectPackageManager(dir: string = cwd): string {
+  // 1. Check for explicit packageManager field (Corepack / modern workflows)
+  try {
+    const pkgPath = join(dir, "package.json");
+    if (existsSync(pkgPath)) {
+      const raw = readFileSync(pkgPath, "utf8");
+      const pkg = JSON.parse(raw) as { packageManager?: string };
+      if (typeof pkg.packageManager === "string") {
+        const pm = pkg.packageManager.split("@")[0];
+        if (["npm", "pnpm", "yarn", "bun"].includes(pm)) {
+          return pm;
+        }
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  // 2. Check the user agent (most reliable when run via npx / pnpm dlx / bunx / yarn dlx)
+  const ua = process.env.npm_config_user_agent || "";
+  if (ua.startsWith("pnpm/")) return "pnpm";
+  if (ua.startsWith("yarn/")) return "yarn";
+  if (ua.startsWith("bun/")) return "bun";
+
+  // 3. Fallback
+  return "npm";
+}
 
 /**
  * Initialize a new Campsite project
@@ -31,7 +66,7 @@ export async function init(): Promise<void> {
   const dirs = [
     join(targetDir, "src", "pages"),
     join(targetDir, "src", "layouts"),
-    join(targetDir, "public")
+    join(targetDir, "static")
   ];
 
   for (const dir of dirs) {
@@ -42,7 +77,7 @@ export async function init(): Promise<void> {
   const configContent = `export default {
   siteName: "My Campsite",
   srcDir: "src",
-  outDir: "dist",
+  outDir: "public",
   templateEngine: "nunjucks",
   markdown: true,
   integrations: {
@@ -112,11 +147,11 @@ body {
 h1 { color: #2d5016; margin-bottom: 1rem; }
 h2 { color: #4a7c2c; margin-top: 1.5rem; }
 `;
-  await writeFile(join(targetDir, "public", "style.css"), cssContent, "utf8");
+  await writeFile(join(targetDir, "static", "style.css"), cssContent, "utf8");
 
   // Create .gitignore
   const gitignoreContent = `node_modules/
-dist/
+public/
 .DS_Store
 `;
   await writeFile(join(targetDir, ".gitignore"), gitignoreContent, "utf8");
@@ -134,13 +169,20 @@ dist/
     },
     dependencies: {
       basecampjs: "^0.0.19"
+    },
+    pnpm: {
+      onlyBuiltDependencies: ["sharp"]
     }
   };
   await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");
 
   console.log(kolor.green("✅ Campsite initialized successfully!\n"));
+
+  const pm = detectPackageManager();
+  const installCmd = pm === "bun" ? "bun install" : `${pm} install`;
+
   console.log(kolor.bold("Next steps:"));
-  console.log(kolor.dim("  1. Install dependencies: npm install"));
+  console.log(kolor.dim(`  1. Install dependencies: ${installCmd}`));
   console.log(kolor.dim("  2. Start developing: camper dev\n"));
 }
 
@@ -149,7 +191,7 @@ dist/
  */
 export async function clean(): Promise<void> {
   const config = await loadConfig(cwd);
-  const outDir = resolve(cwd, config.outDir || "dist");
+  const outDir = resolve(cwd, config.outDir || "public");
 
   if (!existsSync(outDir)) {
     console.log(kolor.dim(`Nothing to clean. ${outDir} does not exist.`));
@@ -183,7 +225,7 @@ export async function check(): Promise<void> {
   const srcDir = resolve(cwd, config.srcDir || "src");
   const pagesDir = join(srcDir, "pages");
   const layoutsDir = join(srcDir, "layouts");
-  const publicDir = resolve(cwd, config.staticDir || "public");
+  const publicDir = resolve(cwd, config.staticDir || "static");
 
   // Check src directory
   if (!existsSync(srcDir)) {

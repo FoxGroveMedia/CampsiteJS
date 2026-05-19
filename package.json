@@ -5,9 +5,8 @@
   "version": "0.0.16",
   "description": "Monorepo for Campsite static site generator and campsitejs CLI.",
   "license": "MIT",
-  "packageManager": "npm@10.9.0",
-  "workspaces": [
-    "packages/create-campsitejs",
-    "packages/basecampjs"
-  ]
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=18"
+  }
 }

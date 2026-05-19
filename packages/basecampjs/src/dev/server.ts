@@ -59,7 +59,7 @@ export function serve(outDir: string, port: number = 4173): Server {
   });
 
   server.listen(port, () => {
-    console.log(kolor.green(`Serving dist at http://localhost:${port}`));
+    console.log(kolor.green(`Serving at http://localhost:${port}`));
   });
 
   return server;

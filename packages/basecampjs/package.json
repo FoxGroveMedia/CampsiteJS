@@ -24,9 +24,9 @@
     "build": "tsc",
     "build:watch": "tsc --watch",
     "dev": "node dist/index.js dev",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit",
-    "pretest": "npm run build",
+    "pretest": "pnpm run build",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage"

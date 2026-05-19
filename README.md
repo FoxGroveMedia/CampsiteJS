@@ -32,7 +32,7 @@ npm create campsitejs@latest my-campsite-name
 - Select to include Markdown + Frontmatter support (yes/no)
 - Choose your template languages (Mustache/Nunjucks/Liquid)
 - Choose to include JS framework support (Vue/Alpine/None)
-- Choose to include CSS framework support (Tailwind/Bootstrap/Foundation/Bulma/None)
+- Choose whether to install Tailwind CSS (yes/no)
 - Choose to enable cache busting for CSS/JS assets (yes/no)
 - Choose to enable HTML/CSS minification (yes/no)
 - Choose your package manager (npm/yarn/pnpm/bun)
@@ -59,22 +59,22 @@ camper serve  # serve existing dist
 
 ## 🛠️ Working in This Repo
 ```
-npm install
+pnpm install
 cd campsite01
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 - Runs the sample site using the local basecampjs build
-- Scripts: `npm run build` (clean production ready build), `npm run serve` (serve existing `campsite/`)
+- Scripts: `pnpm run build` (clean production ready build to public/), `pnpm run serve` (serve existing public/)
 - HTML/CSS minification, you can enable it in `campsite.config.js`
 - Image optimization coming soon!
 
 ## 🚦 CampsiteJS Commands
 - `npx camper init` — scaffold config, folders, and starter files in cwd
-- `npx camper dev` — watch `src/` and `public/`, rebuild, and serve `campsite/`
-- `npx camper build` — clean build to `campsite/`
+- `npx camper dev` — watch `src/` and `static/`, rebuild, and serve from `public/`
+- `npx camper build` — clean build to `public/`
 - `npx camper preview` — build then serve the production output
-- `npx camper serve` — serve an existing `campsite/`
+- `npx camper serve` — serve an existing `public/`
 - `npx camper list` — list pages, layouts, components, collections
 - `npx camper clean` — remove the build output directory
 - `npx camper check` — validate config and project structure
@@ -93,15 +93,15 @@ Read more guides and examples: https://campsitejs.dev/docs
 ## 🗂️ Project Layout
 - packages/create-campsitejs — CLI that copies the starter template and installs deps
 - packages/basecampjs — exposes `camper dev|build|serve` (with `campsite` kept as an alias)
-- campsite-site — sample consumer with `src/pages`, `src/layouts`, `public`
+- sample projects use `src/pages`, `src/layouts`, `static/` for assets; build outputs to `public/` (Laravel Valet/Herd friendly)
 
 ## 🔥 Core Concepts
 - Config: `campsite.config.js` controls `siteName`, `srcDir`, `outDir`, engines, integrations.
 - Pages: Markdown with frontmatter or `.njk` templates; other files copy through.
 - Layouts: Nunjucks defaults with a base layout and content block.
-- Dev loop: file watcher rebuilds on change; output served from `campsite/`.
+- Dev loop: file watcher rebuilds on change; output served from `public/`.
 - Partials: reusable snippets in `src/partials/`.
-- Static assets: basecamp will transfer your gear from `public/` to your new `campsite/` on build automatically.
+- Static assets: basecamp copies files from `static/` (default) or your `staticDir` into the output root on build.
 - Cache busting: enable `cacheBustAssets: true` in config to add content hashes to CSS/JS filenames (e.g., `style.css` → `style-a7e4fj3f9g.css`) and automatically update HTML references on build.
 
 ## 🤝 Contributing

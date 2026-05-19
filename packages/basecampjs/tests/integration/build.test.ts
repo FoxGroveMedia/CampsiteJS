@@ -22,7 +22,7 @@ describe('build integration tests', () => {
   it('builds a minimal site with HTML page', async () => {
     // Set up minimal project structure
     const srcDir = join(testDir, 'src', 'pages');
-    const outDir = join(testDir, 'dist');
+    const outDir = join(testDir, 'public');
     await mkdir(srcDir, { recursive: true });
     
     // Create a simple HTML page
@@ -39,7 +39,7 @@ describe('build integration tests', () => {
 
   it('builds Markdown page with frontmatter', async () => {
     const srcDir = join(testDir, 'src', 'pages');
-    const outDir = join(testDir, 'dist');
+    const outDir = join(testDir, 'public');
     await mkdir(srcDir, { recursive: true });
     
     // Create a Markdown page with frontmatter
@@ -61,21 +61,21 @@ This is a test.`;
     expect(content).toContain('This is a test.');
   });
 
-  it('copies public directory to output', async () => {
-    const publicDir = join(testDir, 'public');
+  it('copies static directory to output', async () => {
+    const staticDir = join(testDir, 'static');
     const srcDir = join(testDir, 'src', 'pages');
-    const outDir = join(testDir, 'dist');
-    await mkdir(publicDir, { recursive: true });
+    const outDir = join(testDir, 'public');
+    await mkdir(staticDir, { recursive: true });
     await mkdir(srcDir, { recursive: true });
     
-    // Create a public asset
-    await writeFile(join(publicDir, 'style.css'), 'body { margin: 0; }');
+    // Create a static asset
+    await writeFile(join(staticDir, 'style.css'), 'body { margin: 0; }');
     await writeFile(join(srcDir, 'index.html'), '<html><body>Test</body></html>');
     
     // Run the build
     await build(testDir, {});
     
-    // Assert public files were copied
+    // Assert static files were copied
     const outFile = join(outDir, 'style.css');
     const content = await readFile(outFile, 'utf-8');
     expect(content).toBe('body { margin: 0; }');
@@ -83,7 +83,7 @@ This is a test.`;
 
   it('generates sitemap.xml', async () => {
     const srcDir = join(testDir, 'src', 'pages');
-    const outDir = join(testDir, 'dist');
+    const outDir = join(testDir, 'public');
     await mkdir(srcDir, { recursive: true });
     
     // Create config file with siteUrl
@@ -106,19 +106,19 @@ This is a test.`;
     expect(content).toContain('https://example.com/about');
   });
 
-  it('excludes public files matching excludeFiles patterns', async () => {
-    const publicDir = join(testDir, 'public');
+  it('excludes static files matching excludeFiles patterns', async () => {
+    const staticDir = join(testDir, 'static');
     const srcDir = join(testDir, 'src', 'pages');
-    const outDir = join(testDir, 'dist');
-    await mkdir(publicDir, { recursive: true });
+    const outDir = join(testDir, 'public');
+    await mkdir(staticDir, { recursive: true });
     await mkdir(srcDir, { recursive: true });
     
-    // Create public assets including one to exclude
-    await writeFile(join(publicDir, 'main.css'), 'body { margin: 0; }');
-    await writeFile(join(publicDir, 'draft.pdf'), 'PDF content');
+    // Create static assets including one to exclude
+    await writeFile(join(staticDir, 'main.css'), 'body { margin: 0; }');
+    await writeFile(join(staticDir, 'draft.pdf'), 'PDF content');
     await writeFile(join(srcDir, 'index.html'), '<html><body>Home</body></html>');
     
-    // Create config with excludeFiles (currently only applies to public directory)
+    // Create config with excludeFiles (applies to staticDir)
     const configContent = `export default { excludeFiles: ['*.pdf'] };`;
     await writeFile(join(testDir, 'campsite.config.js'), configContent);
     
@@ -138,7 +138,7 @@ This is a test.`;
 
   it('processes Nunjucks templates', async () => {
     const srcDir = join(testDir, 'src', 'pages');
-    const outDir = join(testDir, 'dist');
+    const outDir = join(testDir, 'public');
     await mkdir(srcDir, { recursive: true });
     
     // Create a Nunjucks page (frontmatter variables are accessible via page.variableName)
@@ -161,7 +161,7 @@ name: World
   it('loads JSON data from data directory', async () => {
     const srcDir = join(testDir, 'src', 'pages');
     const dataDir = join(testDir, 'src', 'data');
-    const outDir = join(testDir, 'dist');
+    const outDir = join(testDir, 'public');
     await mkdir(srcDir, { recursive: true });
     await mkdir(dataDir, { recursive: true });
     

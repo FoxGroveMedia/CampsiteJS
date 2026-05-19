@@ -76,7 +76,7 @@ export function shouldExcludeFile(filePath: string, excludePatterns: string[] | 
 }
 
 /**
- * Copy public directory to output, respecting exclusions
+ * Copy static assets directory (staticDir) to output root, respecting exclusions
  */
 export async function copyPublic(publicDir: string, outDir: string, excludePatterns: string[] = []): Promise<void> {
   if (!existsSync(publicDir)) return;

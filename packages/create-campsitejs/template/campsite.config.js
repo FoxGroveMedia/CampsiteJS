@@ -3,7 +3,7 @@ export default {
   siteName: "Campsite",
   siteUrl: "https://example.com",
   srcDir: "src",
-  outDir: "dist",
+  outDir: "public",
   templateEngine: "nunjucks",
   frontmatter: true,
   minifyCSS: false,

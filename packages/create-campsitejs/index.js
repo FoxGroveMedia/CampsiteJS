@@ -116,7 +116,7 @@ async function writeConfig(targetDir, answers) {
   siteName: "${answers.projectName}",
   siteUrl: "https://example.com",
   srcDir: "src",
-  outDir: "dist",
+  outDir: "public",
   templateEngine: "nunjucks",
   frontmatter: ${answers.frontmatter},
   minifyCSS: ${answers.minifyAssets},
@@ -163,53 +163,38 @@ async function updatePackageJson(targetDir, answers) {
   if (answers.jsFrameworks === "vue") deps["vue"] = "^3.4.0";
   if (answers.jsFrameworks === "alpine") deps["alpinejs"] = "^3.13.0";
 
-  // CSS framework selection
-  const cssFramework = answers.cssFramework || "none";
-  const cssDeps = {
-    bootstrap: ["bootstrap", "^5.3.3"],
-    foundation: ["foundation-sites", "^6.8.1"],
-    bulma: ["bulma", "^0.9.4"]
-  };
-
-  // Reset CSS-related scripts before applying framework-specific ones
+  // Reset CSS-related scripts before applying Tailwind-specific ones
   ["build:css", "dev:css", "dev:site", "prebuild", "postinstall"].forEach((script) => {
     delete pkg.scripts[script];
   });
 
-  if (cssFramework === "tailwind") {
+  if (answers.tailwind) {
     devDeps["tailwindcss"] = "^4.1.18";
     devDeps["@tailwindcss/cli"] = "^4.1.18";
     devDeps["npm-run-all"] = "^4.1.5";
-    pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --minify";
-    pkg.scripts["dev:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./public/style.css --watch";
+    pkg.scripts["build:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./static/style.css --minify";
+    pkg.scripts["dev:css"] = "tailwindcss -i ./src/styles/tailwind.css -o ./static/style.css --watch";
     pkg.scripts["dev:site"] = "camper dev";
     pkg.scripts["dev"] = "npm-run-all -p dev:css dev:site";
-    pkg.scripts["prebuild"] = "npm run build:css";
-    pkg.scripts["build"] = "camper build";
-    pkg.scripts["serve"] = "camper serve";
-  } else if (cssFramework === "none") {
-    // No CSS framework - just basic scripts
-    delete devDeps["tailwindcss"];
-    delete devDeps["@tailwindcss/cli"];
-    delete devDeps["npm-run-all"];
-    pkg.scripts["dev"] = "camper dev";
+    pkg.scripts["prebuild"] = `${answers.packageManager} run build:css`;
     pkg.scripts["build"] = "camper build";
     pkg.scripts["serve"] = "camper serve";
   } else {
+    // No Tailwind - basic scripts only
     delete devDeps["tailwindcss"];
     delete devDeps["@tailwindcss/cli"];
     delete devDeps["npm-run-all"];
-    Object.entries(cssDeps).forEach(([key, [name]]) => {
-      if (key !== cssFramework) delete deps[name];
-    });
-    const selected = cssDeps[cssFramework];
-    if (selected) {
-      const [name, version] = selected;
-      deps[name] = version;
-    }
     pkg.scripts["dev"] = "camper dev";
     pkg.scripts["build"] = "camper build";
     pkg.scripts["serve"] = "camper serve";
+  }
+
+  // Ensure pnpm allows sharp (and any other native deps) to run their postinstall scripts.
+  // This prevents "ERR_PNPM_IGNORED_BUILDS" when using pnpm.
+  if (!pkg.pnpm) pkg.pnpm = {};
+  if (!Array.isArray(pkg.pnpm.onlyBuiltDependencies)) pkg.pnpm.onlyBuiltDependencies = [];
+  if (!pkg.pnpm.onlyBuiltDependencies.includes("sharp")) {
+    pkg.pnpm.onlyBuiltDependencies.push("sharp");
   }
 
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
@@ -226,8 +211,8 @@ async function pruneComponents(targetDir, answers) {
 }
 
 async function pruneCssFramework(targetDir, answers) {
-  // Remove tailwind.css if not using Tailwind (but keep styles.css)
-  if (answers.cssFramework !== "tailwind") {
+  // Remove tailwind.css if not installing Tailwind (but keep styles.css / base.css)
+  if (!answers.tailwind) {
     const tailwindFiles = [
       join(targetDir, "src", "styles", "tailwind.css")
     ];
@@ -237,7 +222,14 @@ async function pruneCssFramework(targetDir, answers) {
 
 async function installDependencies(targetDir, packageManager) {
   return new Promise((resolve, reject) => {
-    const child = spawn(packageManager, ["install"], {
+    // For pnpm we explicitly allow sharp's build script (native binaries).
+    // Combined with the "pnpm.onlyBuiltDependencies" field in package.json this
+    // makes the experience smooth even on strict pnpm setups.
+    const args = packageManager === "pnpm"
+      ? ["install", "--allow-build=sharp"]
+      : ["install"];
+
+    const child = spawn(packageManager, args, {
       cwd: targetDir,
       stdio: "inherit",
       shell: process.platform === "win32"
@@ -311,17 +303,12 @@ async function main() {
       ]
     },
     {
-      type: "select",
-      name: "cssFramework",
-      message: "CSS framework",
-      initial: 1,
-      choices: [
-        { title: "None", value: "none" },
-        { title: "Tailwind CSS", value: "tailwind" },
-        { title: "Bootstrap", value: "bootstrap" },
-        { title: "Foundation", value: "foundation" },
-        { title: "Bulma", value: "bulma" }
-      ]
+      type: "toggle",
+      name: "tailwind",
+      message: "Install Tailwind CSS?",
+      initial: true,
+      active: "yes",
+      inactive: "no"
     },
     {
       type: "toggle",
@@ -357,10 +344,10 @@ async function main() {
       message: "Package manager",
       initial: 0,
       choices: [
-        { title: "npm", value: "npm" },
-        { title: "pnpm", value: "pnpm" },
-        { title: "yarn", value: "yarn" },
-        { title: "bun", value: "bun" }
+        { title: "🚀 PNPM", value: "pnpm" },
+        { title: "🥯 Bun", value: "bun" },
+        { title: "🧶 Yarn", value: "yarn" },
+        { title: "🐢 NPM", value: "npm" }
       ]
     },
     {
@@ -391,7 +378,14 @@ async function main() {
     try {
       await installDependencies(targetDir, answers.packageManager);
     } catch (err) {
+      const pm = answers.packageManager;
       console.log(kleur.yellow(`Dependency installation failed: ${err.message}`));
+
+      if (pm === "pnpm") {
+        console.log(kleur.dim("\nIf you saw an ERR_PNPM_IGNORED_BUILDS error for sharp, run:"));
+        console.log(kleur.cyan(`   cd ${answers.projectName} && pnpm install --allow-build=sharp`));
+        console.log(kleur.dim("Or approve builds permanently with: pnpm approve-builds\n"));
+      }
     }
   }
 
@@ -403,8 +397,8 @@ async function main() {
     console.log(`   ${kleur.cyan(`${answers.packageManager} install`)}`);
   }
   
-  // If using Tailwind CSS, remind them to build CSS first
-  if (answers.cssFramework === "tailwind") {
+  // If installing Tailwind CSS, remind them to build CSS first
+  if (answers.tailwind) {
     console.log(`   ${kleur.cyan(`${answers.packageManager} run build:css`)} ${kleur.dim("(build Tailwind styles)")}`);
   }
   

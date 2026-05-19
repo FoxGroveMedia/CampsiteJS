@@ -21,8 +21,8 @@ export async function build(cwdArg: string = process.cwd(), options: BuildOption
   const partialsDir = join(srcDir, "partials");
   const dataDir = join(srcDir, "data");
   const collectionsDir = join(srcDir, "collections");
-  const publicDir = resolve(cwdArg, config.staticDir || "public");
-  const outDir = resolve(cwdArg, config.outDir || "dist");
+  const publicDir = resolve(cwdArg, config.staticDir || "static");
+  const outDir = resolve(cwdArg, config.outDir || "public");
   const env = createNunjucksEnv(layoutsDir, pagesDir, srcDir, partialsDir);
   
   // Allow user config to extend the Nunjucks environment (e.g., custom filters)
@@ -90,7 +90,7 @@ export async function build(cwdArg: string = process.cwd(), options: BuildOption
     }
   }
 
-  // Generate robots.txt dynamically if it doesn't exist in public directory
+  // Generate robots.txt dynamically if it doesn't exist in static assets directory
   const publicRobotsTxt = join(publicDir, "robots.txt");
   const distRobotsTxt = join(outDir, "robots.txt");
   if (!existsSync(publicRobotsTxt) && !existsSync(distRobotsTxt)) {
@@ -98,7 +98,7 @@ export async function build(cwdArg: string = process.cwd(), options: BuildOption
     await writeFile(distRobotsTxt, robotsTxt, "utf8");
   }
 
-  // Generate sitemap.xml dynamically if it doesn't exist in public directory
+  // Generate sitemap.xml dynamically if it doesn't exist in static assets directory
   const publicSitemap = join(publicDir, "sitemap.xml");
   const distSitemap = join(outDir, "sitemap.xml");
   if (!existsSync(publicSitemap) && !existsSync(distSitemap)) {

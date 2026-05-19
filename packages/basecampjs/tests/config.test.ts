@@ -10,8 +10,8 @@ describe('config', () => {
       expect(defaultConfig.siteName).toBe('Campsite');
       expect(defaultConfig.siteUrl).toBe('https://example.com');
       expect(defaultConfig.srcDir).toBe('src');
-      expect(defaultConfig.outDir).toBe('dist');
-      expect(defaultConfig.staticDir).toBe('public');
+      expect(defaultConfig.outDir).toBe('public');
+      expect(defaultConfig.staticDir).toBe('static');
       expect(defaultConfig.templateEngine).toBe('nunjucks');
       expect(defaultConfig.port).toBe(4173);
     });
@@ -44,6 +44,7 @@ describe('config', () => {
   });
 
   describe('loadConfig staticDir derivation', () => {
+    // Note: defaults are now staticDir=static, outDir=public; logic prevents collisions when user overrides outDir
     let tmpDir: string;
 
     beforeEach(async () => {
@@ -54,12 +55,13 @@ describe('config', () => {
       await rm(tmpDir, { recursive: true, force: true });
     });
 
-    it('defaults staticDir to public when outDir is not public', async () => {
+    it('defaults staticDir to static (new default) when no outDir override', async () => {
       const config = await loadConfig(tmpDir);
-      expect(config.staticDir).toBe('public');
+      expect(config.staticDir).toBe('static');
+      expect(config.outDir).toBe('public');
     });
 
-    it('auto-derives staticDir to static when outDir is public', async () => {
+    it('auto-derives staticDir to static when user sets outDir to public (avoids collision)', async () => {
       await writeFile(
         join(tmpDir, 'campsite.config.js'),
         'export default { outDir: "public" };'

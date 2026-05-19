@@ -1,6 +1,6 @@
 node_modules
 npm-debug.log*
-dist
-public/style.css
+public/
+static/style.css
 .DS_Store
 .env

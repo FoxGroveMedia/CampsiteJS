@@ -26,9 +26,9 @@ function showHelp(): void {
   console.log("  " + kolor.cyan("dev") + "               Start development server with hot reloading");
   console.log("                    Watches for file changes and rebuilds automatically");
   console.log("  " + kolor.cyan("build") + "             Build your site for production");
-  console.log("                    Optimizes and outputs to dist/ directory");
+  console.log("                    Optimizes and outputs to public/ directory");
   console.log("  " + kolor.cyan("serve") + "             Serve the built site locally");
-  console.log("                    Serves from dist/ folder on http://localhost:4173");
+  console.log("                    Serves from public/ folder on http://localhost:4173");
   console.log("  " + kolor.cyan("preview") + "           Build and serve in production mode");
   console.log("                    Combines build + serve for testing production output\n");
   
@@ -36,7 +36,7 @@ function showHelp(): void {
   console.log("  " + kolor.cyan("list") + "              List all content (pages, layouts, components, etc.)");
   console.log("                    Overview of your project structure");
   console.log("  " + kolor.cyan("clean") + "             Remove build output directory");
-  console.log("                    Deletes dist/ folder for a fresh build");
+  console.log("                    Deletes public/ folder for a fresh build");
   console.log("  " + kolor.cyan("check") + "             Validate config and check for issues");
   console.log("                    Diagnoses project structure and dependencies");
   console.log("  " + kolor.cyan("upgrade") + "           Update CampsiteJS to the latest version");
@@ -82,7 +82,7 @@ async function preview(): Promise<void> {
   await build();
   console.log();
   const config = await loadConfig(cwd);
-  const outDir = resolve(cwd, config.outDir || "dist");
+  const outDir = resolve(cwd, config.outDir || "public");
   console.log(kolor.cyan(kolor.bold("🔥 Starting preview server...\n")));
   serve(outDir, config.port || 4173);
 }
@@ -140,7 +140,7 @@ export async function main(): Promise<void> {
       break;
     case "serve": {
       const config = await loadConfig(cwd);
-      const outDir = resolve(cwd, config.outDir || "dist");
+      const outDir = resolve(cwd, config.outDir || "public");
       if (!existsSync(outDir)) {
         await build();
       }

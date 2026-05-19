@@ -37,8 +37,8 @@ export async function dev(cwdArg: string = process.cwd()): Promise<void> {
 
   const config = await loadConfig(cwdArg);
   const srcDir = resolve(cwdArg, config.srcDir || "src");
-  const publicDir = resolve(cwdArg, config.staticDir || "public");
-  const outDir = resolve(cwdArg, config.outDir || "dist");
+  const publicDir = resolve(cwdArg, config.staticDir || "static");
+  const outDir = resolve(cwdArg, config.outDir || "public");
   const watcher = chokidar.watch([srcDir, publicDir], { ignoreInitial: true });
 
   watcher.on("all", (event: string, path: string) => {
