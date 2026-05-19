@@ -155,7 +155,7 @@ async function updatePackageJson(targetDir, answers) {
     const relCore = relative(targetDir, localCoreDir) || ".";
     deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecampjs"] = "^0.0.23";
+    deps["basecampjs"] = "^0.0.24";
   }
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
@@ -214,7 +214,61 @@ async function pruneCssFramework(targetDir, answers) {
 
 async function installDependencies(targetDir, packageManager) {
   return new Promise((resolve, reject) => {
-    const runInstall = () => {
+    const runInstall = (silent = false) => {
+      return new Promise((res) => {
+        const child = spawn(packageManager, ["install"], {
+          cwd: targetDir,
+          stdio: silent ? ["ignore", "pipe", "pipe"] : "inherit",
+          shell: process.platform === "win32"
+        });
+
+        let output = "";
+        if (silent) {
+          child.stdout?.on("data", (data) => (output += data.toString()));
+          child.stderr?.on("data", (data) => (output += data.toString()));
+        }
+
+        child.on("close", (code) => {
+          res({ code, output });
+        });
+      });
+    };
+
+    if (packageManager === "pnpm") {
+      // First attempt is completely silent
+      runInstall(true).then((first) => {
+        if (first.code === 0) {
+          resolve();
+          return;
+        }
+
+        const output = first.output;
+        const blockedByBuilds =
+          output.includes("IGNORED_BUILDS") ||
+          output.includes("ignored build scripts");
+
+        if (blockedByBuilds) {
+          console.log(kleur.dim("pnpm blocked some build scripts. Approving sharp automatically..."));
+
+          const approve = spawn("pnpm", ["approve-builds", "sharp", "--yes"], {
+            cwd: targetDir,
+            stdio: "inherit",
+            shell: process.platform === "win32"
+          });
+
+          approve.on("close", () => {
+            console.log(kleur.dim("Retrying install..."));
+            runInstall(false).then((second) => {
+              if (second.code === 0) resolve();
+              else reject(new Error(`pnpm install failed with code ${second.code}`));
+            });
+          });
+        } else {
+          reject(new Error(`pnpm install failed with code ${first.code}`));
+        }
+      });
+    } else {
+      // npm / yarn / bun — normal visible install
       const child = spawn(packageManager, ["install"], {
         cwd: targetDir,
         stdio: "inherit",
@@ -224,23 +278,6 @@ async function installDependencies(targetDir, packageManager) {
         if (code === 0) resolve();
         else reject(new Error(`${packageManager} install failed with code ${code}`));
       });
-    };
-
-    if (packageManager === "pnpm") {
-      // Proactively tell pnpm to allow sharp's postinstall script.
-      // This is the most reliable way across pnpm versions.
-      const configChild = spawn("pnpm", ["config", "set", "allowed-builds", "sharp", "--location", "project"], {
-        cwd: targetDir,
-        stdio: "inherit",
-        shell: process.platform === "win32"
-      });
-
-      configChild.on("close", () => {
-        // Even if config set fails for some reason, still try the install
-        runInstall();
-      });
-    } else {
-      runInstall();
     }
   });
 }
@@ -386,10 +423,9 @@ async function main() {
       console.log(kleur.yellow(`Dependency installation failed: ${err.message}`));
 
       if (pm === "pnpm") {
-        console.log(kleur.dim("\nIf pnpm blocked sharp's install script, try:"));
-        console.log(kleur.cyan(`   cd ${answers.projectName} && pnpm install`));
-        console.log(kleur.dim("   (Try running: pnpm config set allowed-builds sharp --location project)"));
-        console.log(kleur.dim("\nStill blocked? Run: pnpm approve-builds sharp"));
+        console.log(kleur.dim("\nAutomatic approval of sharp failed."));
+        console.log(kleur.dim("Please run this command manually inside the project:"));
+        console.log(kleur.cyan(`   pnpm approve-builds sharp`));
       }
     }
   }

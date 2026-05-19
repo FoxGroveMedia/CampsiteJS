@@ -157,16 +157,25 @@ public/
             preview: "camper preview"
         },
         dependencies: {
-            basecampjs: "^0.0.23"
+            basecampjs: "^0.0.24"
         }
     };
     await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");
     // Detect package manager (prefers user agent, falls back to existing package.json)
     const pm = detectPackageManager(targetDir);
+    // For pnpm users, create modern config files so native dependencies (like sharp) work out of the box
+    if (pm === "pnpm") {
+        await writeFile(join(targetDir, ".npmrc"), "allowedBuilds=sharp\n", "utf8");
+        const workspaceContent = `onlyBuiltDependencies:\n  - sharp\n`;
+        await writeFile(join(targetDir, "pnpm-workspace.yaml"), workspaceContent, "utf8");
+    }
     console.log(kolor.green("✅ Campsite initialized successfully!\n"));
     const installCmd = pm === "bun" ? "bun install" : `${pm} install`;
     console.log(kolor.bold("Next steps:"));
     console.log(kolor.dim(`  1. Install dependencies: ${installCmd}`));
+    if (pm === "pnpm") {
+        console.log(kolor.dim("     (Created .npmrc + pnpm-workspace.yaml so native dependencies like sharp work automatically)"));
+    }
     console.log(kolor.dim("  2. Start developing: camper dev\n"));
 }
 /**
