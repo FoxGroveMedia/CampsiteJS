@@ -157,7 +157,7 @@ public/
             preview: "camper preview"
         },
         dependencies: {
-            basecampjs: "^0.0.22"
+            basecampjs: "^0.0.23"
         }
     };
     await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");

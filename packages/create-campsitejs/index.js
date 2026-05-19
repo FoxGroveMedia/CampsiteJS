@@ -155,7 +155,7 @@ async function updatePackageJson(targetDir, answers) {
     const relCore = relative(targetDir, localCoreDir) || ".";
     deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecampjs"] = "^0.0.22";
+    deps["basecampjs"] = "^0.0.23";
   }
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
@@ -190,19 +190,6 @@ async function updatePackageJson(targetDir, answers) {
   }
 
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
-
-  // When the user chooses pnpm, generate modern configuration to allow sharp
-  // (and similar native binaries) to run their postinstall scripts.
-  if (answers.packageManager === "pnpm") {
-    // Preferred for most pnpm versions
-    const npmrcPath = join(targetDir, ".npmrc");
-    await writeFile(npmrcPath, "allowed-builds=sharp\n", "utf8");
-
-    // Helpful for newer pnpm versions that prefer workspace-level config
-    const workspacePath = join(targetDir, "pnpm-workspace.yaml");
-    const workspaceContent = `onlyBuiltDependencies:\n  - sharp\n`;
-    await writeFile(workspacePath, workspaceContent, "utf8");
-  }
 }
 
 async function pruneComponents(targetDir, answers) {
@@ -227,19 +214,34 @@ async function pruneCssFramework(targetDir, answers) {
 
 async function installDependencies(targetDir, packageManager) {
   return new Promise((resolve, reject) => {
-    // For pnpm we rely on the .npmrc + pnpm-workspace.yaml we generate
-    // rather than CLI flags. This is more reliable across pnpm versions.
-    const args = ["install"];
+    const runInstall = () => {
+      const child = spawn(packageManager, ["install"], {
+        cwd: targetDir,
+        stdio: "inherit",
+        shell: process.platform === "win32"
+      });
+      child.on("close", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`${packageManager} install failed with code ${code}`));
+      });
+    };
 
-    const child = spawn(packageManager, args, {
-      cwd: targetDir,
-      stdio: "inherit",
-      shell: process.platform === "win32"
-    });
-    child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${packageManager} install failed with code ${code}`));
-    });
+    if (packageManager === "pnpm") {
+      // Proactively tell pnpm to allow sharp's postinstall script.
+      // This is the most reliable way across pnpm versions.
+      const configChild = spawn("pnpm", ["config", "set", "allowed-builds", "sharp", "--location", "project"], {
+        cwd: targetDir,
+        stdio: "inherit",
+        shell: process.platform === "win32"
+      });
+
+      configChild.on("close", () => {
+        // Even if config set fails for some reason, still try the install
+        runInstall();
+      });
+    } else {
+      runInstall();
+    }
   });
 }
 
@@ -386,7 +388,7 @@ async function main() {
       if (pm === "pnpm") {
         console.log(kleur.dim("\nIf pnpm blocked sharp's install script, try:"));
         console.log(kleur.cyan(`   cd ${answers.projectName} && pnpm install`));
-        console.log(kleur.dim("   (We created .npmrc + pnpm-workspace.yaml for you)"));
+        console.log(kleur.dim("   (Try running: pnpm config set allowed-builds sharp --location project)"));
         console.log(kleur.dim("\nStill blocked? Run: pnpm approve-builds sharp"));
       }
     }

@@ -9,7 +9,7 @@
     "serve": "camper serve"
   },
   "dependencies": {
-    "basecampjs": "^0.0.22"
+    "basecampjs": "^0.0.23"
   },
   "devDependencies": {}
 }
