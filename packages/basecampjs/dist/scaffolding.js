@@ -163,19 +163,10 @@ public/
     await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");
     // Detect package manager (prefers user agent, falls back to existing package.json)
     const pm = detectPackageManager(targetDir);
-    // For pnpm users, generate modern config to allow native dependencies (sharp, etc.)
-    if (pm === "pnpm") {
-        await writeFile(join(targetDir, ".npmrc"), "allowed-builds=sharp\n", "utf8");
-        const workspaceContent = `onlyBuiltDependencies:\n  - sharp\n`;
-        await writeFile(join(targetDir, "pnpm-workspace.yaml"), workspaceContent, "utf8");
-    }
     console.log(kolor.green("✅ Campsite initialized successfully!\n"));
     const installCmd = pm === "bun" ? "bun install" : `${pm} install`;
     console.log(kolor.bold("Next steps:"));
     console.log(kolor.dim(`  1. Install dependencies: ${installCmd}`));
-    if (pm === "pnpm") {
-        console.log(kolor.dim("     (Created .npmrc + pnpm-workspace.yaml to allow native dependencies like sharp)"));
-    }
     console.log(kolor.dim("  2. Start developing: camper dev\n"));
 }
 /**
