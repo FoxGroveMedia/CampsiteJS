@@ -155,7 +155,7 @@ async function updatePackageJson(targetDir, answers) {
     const relCore = relative(targetDir, localCoreDir) || ".";
     deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecampjs"] = "^0.0.18";
+    deps["basecampjs"] = "^0.0.22";
   }
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
@@ -189,22 +189,19 @@ async function updatePackageJson(targetDir, answers) {
     pkg.scripts["serve"] = "camper serve";
   }
 
-  // Ensure pnpm allows sharp (and any other native deps) to run their postinstall scripts.
-  // This prevents "ERR_PNPM_IGNORED_BUILDS" when using pnpm.
-  if (!pkg.pnpm) pkg.pnpm = {};
-  if (!Array.isArray(pkg.pnpm.onlyBuiltDependencies)) pkg.pnpm.onlyBuiltDependencies = [];
-  if (!pkg.pnpm.onlyBuiltDependencies.includes("sharp")) {
-    pkg.pnpm.onlyBuiltDependencies.push("sharp");
-  }
-
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
 
-  // For pnpm projects, create a .npmrc that allows sharp to run its postinstall script.
-  // This is the modern way (the "pnpm.onlyBuiltDependencies" in package.json is deprecated).
+  // When the user chooses pnpm, generate modern configuration to allow sharp
+  // (and similar native binaries) to run their postinstall scripts.
   if (answers.packageManager === "pnpm") {
+    // Preferred for most pnpm versions
     const npmrcPath = join(targetDir, ".npmrc");
-    const npmrcContent = "allowed-builds=sharp\n";
-    await writeFile(npmrcPath, npmrcContent, "utf8");
+    await writeFile(npmrcPath, "allowed-builds=sharp\n", "utf8");
+
+    // Helpful for newer pnpm versions that prefer workspace-level config
+    const workspacePath = join(targetDir, "pnpm-workspace.yaml");
+    const workspaceContent = `onlyBuiltDependencies:\n  - sharp\n`;
+    await writeFile(workspacePath, workspaceContent, "utf8");
   }
 }
 
@@ -230,9 +227,8 @@ async function pruneCssFramework(targetDir, answers) {
 
 async function installDependencies(targetDir, packageManager) {
   return new Promise((resolve, reject) => {
-    // We rely on the "pnpm.onlyBuiltDependencies" field we inject into package.json
-    // rather than passing --allow-build on the command line. This is more compatible
-    // across different pnpm versions.
+    // For pnpm we rely on the .npmrc + pnpm-workspace.yaml we generate
+    // rather than CLI flags. This is more reliable across pnpm versions.
     const args = ["install"];
 
     const child = spawn(packageManager, args, {
@@ -388,10 +384,10 @@ async function main() {
       console.log(kleur.yellow(`Dependency installation failed: ${err.message}`));
 
       if (pm === "pnpm") {
-        console.log(kleur.dim("\nIf pnpm blocked sharp's install script, run one of these:"));
+        console.log(kleur.dim("\nIf pnpm blocked sharp's install script, try:"));
         console.log(kleur.cyan(`   cd ${answers.projectName} && pnpm install`));
-        console.log(kleur.dim("   (A .npmrc with allowed-builds=sharp was created for you)"));
-        console.log(kleur.dim("\nAlternative: pnpm approve-builds sharp"));
+        console.log(kleur.dim("   (We created .npmrc + pnpm-workspace.yaml for you)"));
+        console.log(kleur.dim("\nStill blocked? Run: pnpm approve-builds sharp"));
       }
     }
   }
