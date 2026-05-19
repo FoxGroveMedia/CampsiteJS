@@ -168,7 +168,7 @@ public/
       preview: "camper preview"
     },
     dependencies: {
-      basecampjs: "^0.0.19"
+      basecampjs: "^0.0.20"
     },
     pnpm: {
       onlyBuiltDependencies: ["sharp"]
