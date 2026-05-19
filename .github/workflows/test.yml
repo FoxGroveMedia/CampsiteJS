@@ -88,12 +88,11 @@ jobs:
         run: |
           echo "Node version: $(node --version)"
           echo "pnpm version: $(pnpm --version)"
-          echo "pnpm store: $(pnpm store path)"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Smoke test create-campsitejs CLI
+      - name: Smoke tests for create-campsitejs
         run: |
           echo "=== Testing --version ==="
           node packages/create-campsitejs/index.js --version
@@ -101,31 +100,11 @@ jobs:
           echo "=== Testing --help ==="
           node packages/create-campsitejs/index.js --help
 
-          echo "=== Testing module load (ESM) ==="
+          echo "=== Testing ESM module load ==="
           node --input-type=module -e '
             import("./packages/create-campsitejs/index.js")
-              .then(() => console.log("✅ Module imported successfully"))
-              .catch(err => { console.error("❌ Import failed:", err); process.exit(1); });
+              .then(() => console.log("✅ ESM import successful"))
+              .catch(err => { console.error(err); process.exit(1); });
           '
 
-      - name: E2E test - Create new project (non-interactive dry run)
-        run: |
-          echo "=== Running end-to-end project creation test ==="
-          mkdir -p /tmp/campsite-e2e-test
-          cd /tmp/campsite-e2e-test
-
-          node -e '
-            const { spawnSync } = require("child_process");
-            const result = spawnSync("node", [
-              process.cwd() + "/../../../packages/create-campsitejs/index.js",
-              "--help"
-            ], { encoding: "utf8" });
-
-            if (result.status !== 0) {
-              console.error("CLI execution failed");
-              process.exit(1);
-            }
-            console.log("✅ CLI execution test passed");
-          '
-
-          echo "✅ create-campsitejs E2E smoke test completed successfully"
+          echo "✅ All create-campsitejs smoke tests passed"
