@@ -11,8 +11,5 @@
   "dependencies": {
     "basecampjs": "^0.0.20"
   },
-  "devDependencies": {},
-  "pnpm": {
-    "onlyBuiltDependencies": ["sharp"]
-  }
+  "devDependencies": {}
 }

@@ -169,20 +169,28 @@ public/
     },
     dependencies: {
       basecampjs: "^0.0.20"
-    },
-    pnpm: {
-      onlyBuiltDependencies: ["sharp"]
     }
   };
   await writeFile(join(targetDir, "package.json"), JSON.stringify(packageJson, null, 2), "utf8");
 
+  // Detect package manager (prefers user agent, falls back to existing package.json)
+  const pm = detectPackageManager(targetDir);
+
+  // Only create .npmrc for pnpm (to allow sharp and other native deps)
+  if (pm === "pnpm") {
+    const npmrcContent = "allowed-builds=sharp\n";
+    await writeFile(join(targetDir, ".npmrc"), npmrcContent, "utf8");
+  }
+
   console.log(kolor.green("✅ Campsite initialized successfully!\n"));
 
-  const pm = detectPackageManager();
   const installCmd = pm === "bun" ? "bun install" : `${pm} install`;
 
   console.log(kolor.bold("Next steps:"));
   console.log(kolor.dim(`  1. Install dependencies: ${installCmd}`));
+  if (pm === "pnpm") {
+    console.log(kolor.dim("     (A .npmrc file was created to allow native dependencies like sharp)"));
+  }
   console.log(kolor.dim("  2. Start developing: camper dev\n"));
 }
 

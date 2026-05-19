@@ -198,6 +198,14 @@ async function updatePackageJson(targetDir, answers) {
   }
 
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2), "utf8");
+
+  // For pnpm projects, create a .npmrc that allows sharp to run its postinstall script.
+  // This is the modern way (the "pnpm.onlyBuiltDependencies" in package.json is deprecated).
+  if (answers.packageManager === "pnpm") {
+    const npmrcPath = join(targetDir, ".npmrc");
+    const npmrcContent = "allowed-builds=sharp\n";
+    await writeFile(npmrcPath, npmrcContent, "utf8");
+  }
 }
 
 async function pruneComponents(targetDir, answers) {
@@ -222,12 +230,10 @@ async function pruneCssFramework(targetDir, answers) {
 
 async function installDependencies(targetDir, packageManager) {
   return new Promise((resolve, reject) => {
-    // For pnpm we explicitly allow sharp's build script (native binaries).
-    // Combined with the "pnpm.onlyBuiltDependencies" field in package.json this
-    // makes the experience smooth even on strict pnpm setups.
-    const args = packageManager === "pnpm"
-      ? ["install", "--allow-build=sharp"]
-      : ["install"];
+    // We rely on the "pnpm.onlyBuiltDependencies" field we inject into package.json
+    // rather than passing --allow-build on the command line. This is more compatible
+    // across different pnpm versions.
+    const args = ["install"];
 
     const child = spawn(packageManager, args, {
       cwd: targetDir,
@@ -382,9 +388,10 @@ async function main() {
       console.log(kleur.yellow(`Dependency installation failed: ${err.message}`));
 
       if (pm === "pnpm") {
-        console.log(kleur.dim("\nIf you saw an ERR_PNPM_IGNORED_BUILDS error for sharp, run:"));
-        console.log(kleur.cyan(`   cd ${answers.projectName} && pnpm install --allow-build=sharp`));
-        console.log(kleur.dim("Or approve builds permanently with: pnpm approve-builds\n"));
+        console.log(kleur.dim("\nIf pnpm blocked sharp's install script, run one of these:"));
+        console.log(kleur.cyan(`   cd ${answers.projectName} && pnpm install`));
+        console.log(kleur.dim("   (A .npmrc with allowed-builds=sharp was created for you)"));
+        console.log(kleur.dim("\nAlternative: pnpm approve-builds sharp"));
       }
     }
   }
