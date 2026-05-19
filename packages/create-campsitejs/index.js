@@ -155,7 +155,7 @@ async function updatePackageJson(targetDir, answers) {
     const relCore = relative(targetDir, localCoreDir) || ".";
     deps["basecampjs"] = `file:${relCore}`;
   } else {
-    deps["basecampjs"] = "^0.0.24";
+    deps["basecampjs"] = "^0.0.25";
   }
   if (answers.templateEngines.includes("nunjucks")) devDeps["nunjucks"] = "^3.2.4";
   if (answers.templateEngines.includes("liquid")) devDeps["liquidjs"] = "^10.12.0";
@@ -326,8 +326,8 @@ async function main() {
       min: 0,
       choices: [
         { title: "Liquid", value: "liquid", selected: false },
-        { title: "Mustache", value: "mustache", selected: true },
-        { title: "Nunjucks", value: "nunjucks", selected: false }
+        { title: "Mustache", value: "mustache", selected: false },
+        { title: "Nunjucks", value: "nunjucks", selected: true }
       ]
     },
     {
